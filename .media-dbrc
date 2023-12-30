@@ -1,0 +1,1 @@
+s docker run -p 27017:27017 --name media-nosql-db -v ~/mongo/media-db:/var/lib/mongodb -v ~/mongo/mongod.conf:/var/log/mongodb/mongod.log -d mongo
