@@ -15,6 +15,7 @@ import * as mongodb from "mongodb";
 import { dirname } from "path";
 import srtParser2 from "srt-parser-2";
 import { fileURLToPath } from "url";
+import cors from "cors";
 
 // Define a list of error codes the server can close with
 const ErrorCodes = {
@@ -115,6 +116,14 @@ app.use(
     // NOTE order matters .json() -> .urlencoded()
     limit: "5mb", // Use this to extend bandwidth to the server
     extended: true,
+  })
+);
+// CORS config for react
+app.use(
+  cors({
+    origin: "http://localhost:3000",
+    credentials: true,
+    optionsSuccessStatus: 200,
   })
 );
 // Blacklist IPs that are in the blacklist.tsv file
