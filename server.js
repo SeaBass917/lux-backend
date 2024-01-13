@@ -629,7 +629,7 @@ async function updateMediaCollectionIndex() {
         title: doc["title"],
         nsfw: doc["nsfw"],
         author: doc["author"],
-        date_added: doc["dateAdded"],
+        dateAdded: doc["dateAdded"],
       };
 
       // If the title is not on file, discard this record
@@ -662,7 +662,8 @@ async function updateMediaCollectionIndex() {
       var data = {
         title: doc["title"],
         nsfw: doc["nsfw"],
-        date_added: doc["dateAdded"],
+        dateAdded: doc["dateAdded"],
+        yearstart: doc["yearstart"],
       };
 
       // If the title is not on file, discard this record
@@ -1267,6 +1268,12 @@ app.get("/GetVideoCollectionIndex", function (req, res) {
     return;
   }
   recordIPSuccessfulAttempt(ip);
+
+  // Ensure that the jwt path is set up
+  const token = getJWTFromReq(req);
+  if (!isMediaPathSet(token)) {
+    createMediaPath(token);
+  }
 
   var { index, isGood } = _mediaCollectionIndex["video"];
   if (isGood) res.status(200).send(Object.values(index));

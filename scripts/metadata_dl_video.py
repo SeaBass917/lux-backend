@@ -178,7 +178,8 @@ def download_missing_video_data():
                 incomplete_metadata_set.add(
                     (title, ",".join(missing_params), os.path.exists(thumbnail_addr)))
 
-            meta_data["dateAdded"] = datetime.datetime.now()
+            if "dateAdded" not in meta_data or not meta_data["dateAdded"]:
+                meta_data["dateAdded"] = datetime.datetime.now()
 
             # Stash the metadata retrieved
             if is_update:

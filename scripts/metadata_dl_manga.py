@@ -142,7 +142,7 @@ def download_missing_manga_data():
 
         is_update = len(meta_data) > 0
 
-        # If there are missing parameters go through an aquire them
+        # If there are missing parameters go through an acquire them
         missing_params = determine_missing_required_params(meta_data,
                                                            required_metadata)
         if 0 < len(missing_params):
@@ -178,7 +178,8 @@ def download_missing_manga_data():
                     f"WARNING! We are still missing: [{', '.join(missing_params)}].")
                 incomplete_metadata_set.add(title)
 
-            meta_data["dateAdded"] = datetime.datetime.now()
+            if "dateAdded" not in meta_data or not meta_data["dateAdded"]:
+                meta_data["dateAdded"] = datetime.datetime.now()
 
             # Stash the metadata retrieved
             if is_update:
