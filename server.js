@@ -664,16 +664,12 @@ async function updateMediaCollectionIndex() {
         nsfw: doc["nsfw"],
         dateAdded: doc["dateAdded"],
         yearstart: doc["yearstart"],
+        description: doc["description"],
       };
 
       // If the title is not on file, discard this record
       if (!fs.existsSync(`${config.folders.FolderVideo}/${data["title"]}`)) {
         continue;
-      }
-
-      // If the cover_addr is still empty, then store the icon_addr
-      if (!fs.existsSync(data["cover_addr"])) {
-        data["cover_addr"] = data["icon_addr"];
       }
 
       index[doc["title"]] = data;
