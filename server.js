@@ -148,6 +148,25 @@ app.use(function (req, res, next) {
     next();
   });
 });
+// Log all traffic
+app.use(function (req, res, next) {
+  // Break up the request into it's components
+  const ip = req.headers.host ?? req.ip;
+  const method = req.method;
+  const url = req.url;
+  const endpoint = (url ?? "").split("?")[0];
+  const query = JSON.stringify(req.query);
+  const header = req.headers;
+  const auth =
+    header && header.authorization && header.authorization.length > 25
+      ? header.authorization.substring(header.authorization.length - 25)
+      : "";
+
+  // Log the request
+  console.log(`${ip} ${method} ${endpoint} ${auth} ${query}`);
+
+  next();
+});
 // This limit specifically applies to IPs that have not sent a valid token.
 app.use(
   expressRateLimit({
@@ -274,6 +293,8 @@ function isMediaPathSet(token) {
  * @param {String} token jwt token of the client.
  */
 function createMediaPath(token) {
+  if (isMediaPathSet(token)) return;
+
   let tokenShort = convertTokenToFolderName(token);
 
   // Make the obscured folder
@@ -324,9 +345,6 @@ function recordIPFailedAttempt(ip, userAgent = "Unknown") {
 
     // Add the IP to the blacklist.tsv
     blacklistIP(ip, userAgent);
-
-    // Remove the IP from the history
-    delete _ipHistory[ip];
   }
 }
 
@@ -350,6 +368,11 @@ function recordIPSuccessfulAttempt(ip) {
  * @param {String} userAgent User agent of the request.
  */
 function blacklistIP(ip, userAgent = "Unknown") {
+  console.error(`Blacklisting: ${ip}`);
+
+  // Remove the IP from the history
+  delete _ipHistory[ip];
+
   fs.appendFile(
     "./blacklist.tsv",
     `${Date()}\t${userAgent}\t${ip}\n`,
@@ -1127,6 +1150,9 @@ app.post("/GetAuthToken", function (req, res) {
       // Caller was successful, record the IP
       recordIPSuccessfulAttempt(ip);
 
+      // Ensure that the jwt path is set up
+      createMediaPath(token);
+
       // Send the token
       res.status(200).send(token);
     } else {
@@ -1153,10 +1179,7 @@ app.get("/GetMangaCollectionIndex", function (req, res) {
   recordIPSuccessfulAttempt(ip);
 
   // Ensure that the jwt path is set up
-  const token = getJWTFromReq(req);
-  if (!isMediaPathSet(token)) {
-    createMediaPath(token);
-  }
+  createMediaPath(getJWTFromReq(req));
 
   // Return the index
   var { index, isGood } = _mediaCollectionIndex["manga"];
@@ -1188,7 +1211,12 @@ app.get("/GetMangaMetaDataByTitle", function (req, res) {
     res.status(401).send(err);
     return;
   }
+
+  // Record the IP
   recordIPSuccessfulAttempt(ip);
+
+  // Ensure that the jwt path is set up
+  createMediaPath(getJWTFromReq(req));
 
   // Filter function for fields we don't want to send to the client
   function filter_db_privates(doc) {
@@ -1223,7 +1251,12 @@ app.get("/GetMangaChaptersByTitle", function (req, res) {
     res.status(401).send(err);
     return;
   }
+
+  // Record the IP
   recordIPSuccessfulAttempt(ip);
+
+  // Ensure that the jwt path is set up
+  createMediaPath(getJWTFromReq(req));
 
   // Build a list containing the chapter index for each requested title
   // Data is in the FS index
@@ -1263,13 +1296,12 @@ app.get("/GetVideoCollectionIndex", function (req, res) {
     res.status(401).send(err);
     return;
   }
+
+  // Record the IP
   recordIPSuccessfulAttempt(ip);
 
   // Ensure that the jwt path is set up
-  const token = getJWTFromReq(req);
-  if (!isMediaPathSet(token)) {
-    createMediaPath(token);
-  }
+  createMediaPath(getJWTFromReq(req));
 
   var { index, isGood } = _mediaCollectionIndex["video"];
   if (isGood) res.status(200).send(Object.values(index));
@@ -1299,7 +1331,12 @@ app.get("/GetVideoMetaDataByTitle", function (req, res) {
     res.status(401).send(err);
     return;
   }
+
+  // Record the IP
   recordIPSuccessfulAttempt(ip);
+
+  // Ensure that the jwt path is set up
+  createMediaPath(getJWTFromReq(req));
 
   // Filter function for fields we don't want to send to the client
   function filter_db_privates(doc) {
@@ -1333,7 +1370,12 @@ app.get("/GetVideoEpisodesByTitle", function (req, res) {
     res.status(401).send(err);
     return;
   }
+
+  // Record the IP
   recordIPSuccessfulAttempt(ip);
+
+  // Ensure that the jwt path is set up
+  createMediaPath(getJWTFromReq(req));
 
   // Build a list containing the chapter index for each requested title
   // Data is in the FS index
@@ -1391,7 +1433,12 @@ app.get("/GetSubtitleSelectionsForEpisode", function (req, res) {
     res.status(401).send(err);
     return;
   }
+
+  // Record the IP
   recordIPSuccessfulAttempt(ip);
+
+  // Ensure that the jwt path is set up
+  createMediaPath(getJWTFromReq(req));
 
   // Get the subtitles options for the provided episode of the given title.
   if (_mediaFSIndex["subtitles"].hasOwnProperty(title_str)) {
@@ -1471,7 +1518,12 @@ app.get("/GetSubtitlesChewieFmt", function (req, res) {
     res.status(401).send(err);
     return;
   }
+
+  // Record the IP
   recordIPSuccessfulAttempt(ip);
+
+  // Ensure that the jwt path is set up
+  createMediaPath(getJWTFromReq(req));
 
   // Get the subtitles options for the provided episode of the given title.
   if (_mediaFSIndex["subtitles"].hasOwnProperty(title_str)) {
