@@ -104,7 +104,14 @@ console.error = function () {
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 var app = express();
-app.use("/public", express.static(`${__dirname}/public`));
+// CORS config for react
+app.use(
+  cors({
+    origin: "http://localhost:3000",
+    credentials: true,
+    optionsSuccessStatus: 200,
+  })
+);
 // Extend bandwidth from the server
 app.use(
   bodyParser.json({
@@ -118,14 +125,27 @@ app.use(
     extended: true,
   })
 );
-// CORS config for react
-app.use(
-  cors({
-    origin: "http://localhost:3000",
-    credentials: true,
-    optionsSuccessStatus: 200,
-  })
-);
+// Create a static path to the public folder
+app.use("/public", express.static(`${__dirname}/public`));
+// Log all traffic
+app.use(function (req, res, next) {
+  // Break up the request into it's components
+  const ip = req.headers.host ?? req.ip;
+  const method = req.method;
+  const url = req.url;
+  const endpoint = (url ?? "").split("?")[0];
+  const query = JSON.stringify(req.query);
+  const header = req.headers;
+  const auth =
+    header && header.authorization && header.authorization.length > 25
+      ? header.authorization.substring(header.authorization.length - 25)
+      : "";
+
+  // Log the request
+  console.log(`${ip} ${method} ${endpoint} ${auth} ${query}`);
+
+  next();
+});
 // Blacklist IPs that are in the blacklist.tsv file
 app.use(function (req, res, next) {
   fs.readFile("./blacklist.tsv", function (err, data) {
@@ -147,25 +167,6 @@ app.use(function (req, res, next) {
 
     next();
   });
-});
-// Log all traffic
-app.use(function (req, res, next) {
-  // Break up the request into it's components
-  const ip = req.headers.host ?? req.ip;
-  const method = req.method;
-  const url = req.url;
-  const endpoint = (url ?? "").split("?")[0];
-  const query = JSON.stringify(req.query);
-  const header = req.headers;
-  const auth =
-    header && header.authorization && header.authorization.length > 25
-      ? header.authorization.substring(header.authorization.length - 25)
-      : "";
-
-  // Log the request
-  console.log(`${ip} ${method} ${endpoint} ${auth} ${query}`);
-
-  next();
 });
 // This limit specifically applies to IPs that have not sent a valid token.
 app.use(
