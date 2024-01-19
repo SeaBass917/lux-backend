@@ -4,20 +4,37 @@ import parseAss from "ass-parser";
 import bcrypt from "bcrypt";
 import bodyParser from "body-parser";
 import * as child from "child_process";
-import { create } from "domain";
+import cors from "cors";
 import dotenv from "dotenv";
 import express from "express";
 import expressRateLimit from "express-rate-limit";
 import fs from "fs";
-import ini from "ini";
 import jwt from "jsonwebtoken";
 import * as mongodb from "mongodb";
 import { dirname } from "path";
 import srtParser2 from "srt-parser-2";
 import { fileURLToPath } from "url";
-import cors from "cors";
 
-// Define a list of error codes the server can close with
+import config from "./config_manager/config_manager.js";
+import logger from "./logging/logging.js";
+
+/*******************************************************************************
+ * Initialize any server variables, config, logging.
+ ******************************************************************************/
+
+/**
+ *  Full path to the server.js file.
+ */
+const __filename = fileURLToPath(import.meta.url);
+
+/**
+ * Full path to the current working directory.
+ */
+const __dirname = dirname(__filename);
+
+/**
+ * Error codes the server can close with.
+ */
 const ErrorCodes = {
   SUCCESS: 0,
   UNKNOWN: -1,
@@ -26,83 +43,14 @@ const ErrorCodes = {
 };
 
 // Load the .secrets.env data
+// They can now be accessed from `process.env.${...}`
 dotenv.config({
   path: ".secrets.env",
 });
 
-// Load in config data
-// Ensure config has all required parameters,
-// including those needed by sub scripts
-const config = ini.parse(fs.readFileSync("./config.ini", "utf-8"));
-if (!validateConfig()) {
-  shutdown(ErrorCodes.CONFIG_ERROR);
-}
-
-// Overload the console log to log with timestamps
-var log = console.log;
-console.log = function () {
-  var first_parameter = arguments[0];
-  var other_parameters = Array.prototype.slice.call(arguments, 1);
-
-  function formatConsoleDate(date) {
-    var hour = date.getHours();
-    var minutes = date.getMinutes();
-    var seconds = date.getSeconds();
-    var milliseconds = date.getMilliseconds();
-
-    return (
-      "[" +
-      (hour < 10 ? "0" + hour : hour) +
-      ":" +
-      (minutes < 10 ? "0" + minutes : minutes) +
-      ":" +
-      (seconds < 10 ? "0" + seconds : seconds) +
-      "." +
-      ("00" + milliseconds).slice(-3) +
-      "] "
-    );
-  }
-
-  log.apply(
-    console,
-    [formatConsoleDate(new Date()) + first_parameter].concat(other_parameters)
-  );
-};
-var error = console.error;
-console.error = function () {
-  var first_parameter = arguments[0];
-  var other_parameters = Array.prototype.slice.call(arguments, 1);
-
-  function formatConsoleDate(date) {
-    var hour = date.getHours();
-    var minutes = date.getMinutes();
-    var seconds = date.getSeconds();
-    var milliseconds = date.getMilliseconds();
-
-    return (
-      "[" +
-      (hour < 10 ? "0" + hour : hour) +
-      ":" +
-      (minutes < 10 ? "0" + minutes : minutes) +
-      ":" +
-      (seconds < 10 ? "0" + seconds : seconds) +
-      "." +
-      ("00" + milliseconds).slice(-3) +
-      "] "
-    );
-  }
-
-  log.apply(
-    error,
-    [formatConsoleDate(new Date()) + first_parameter].concat(other_parameters)
-  );
-};
-
-/*
- * Express Configurations
- */
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+/*******************************************************************************
+ * Express Configurations and Middleware
+ ******************************************************************************/
 var app = express();
 // CORS config for react
 app.use(
@@ -142,7 +90,7 @@ app.use(function (req, res, next) {
       : "";
 
   // Log the request
-  console.log(`${ip} ${method} ${endpoint} ${auth} ${query}`);
+  logger.info(`${ip} ${method} ${endpoint} ${auth} ${query}`);
 
   next();
 });
@@ -150,7 +98,7 @@ app.use(function (req, res, next) {
 app.use(function (req, res, next) {
   fs.readFile("./blacklist.tsv", function (err, data) {
     if (err) {
-      console.error(err);
+      logger.error(err);
       return;
     }
 
@@ -200,7 +148,7 @@ app.use(
 var server = app.listen(config.server.ServerPort, async function () {
   let address = server.address();
   let { stdout } = await sh("curl ifconfig.me");
-  console.log(`App listening at http://${stdout}:${address.port}`);
+  logger.info(`App listening at http://${stdout}:${address.port}`);
 
   // Start the server
   init();
@@ -342,7 +290,7 @@ function recordIPFailedAttempt(ip, userAgent = "Unknown") {
   // TODO: Make this a config parameter
   const threshold = config.server.LimitFailedLoginAttempts;
   if (threshold <= _ipHistory[ip]["failedAttempts"]) {
-    console.log(`Blocking IP after ${threshold} failed requests: ${ip}`);
+    logger.info(`Blocking IP after ${threshold} failed requests: ${ip}`);
 
     // Add the IP to the blacklist.tsv
     blacklistIP(ip, userAgent);
@@ -369,7 +317,7 @@ function recordIPSuccessfulAttempt(ip) {
  * @param {String} userAgent User agent of the request.
  */
 function blacklistIP(ip, userAgent = "Unknown") {
-  console.error(`Blacklisting: ${ip}`);
+  logger.info(`Blacklisting: ${ip}`);
 
   // Remove the IP from the history
   delete _ipHistory[ip];
@@ -378,7 +326,7 @@ function blacklistIP(ip, userAgent = "Unknown") {
     "./blacklist.tsv",
     `${Date()}\t${userAgent}\t${ip}\n`,
     function (err) {
-      if (err) console.error(`Failed to add ${ip} to blacklist.tsv`);
+      if (err) logger.error(`Failed to add ${ip} to blacklist.tsv`);
     }
   );
 }
@@ -387,9 +335,9 @@ function blacklistIP(ip, userAgent = "Unknown") {
  *  @brief  Handle the shutdown of the server.
  */
 function shutdown(statusCode = ErrorCodes.SUCCESS) {
-  console.log("Shutting down the server...");
+  logger.info("Shutting down the server...");
   server.close(() => {
-    console.log("Server has been gracefully closed.");
+    logger.info("Server has been gracefully closed.");
     process.exit(statusCode);
   });
 }
@@ -416,24 +364,24 @@ async function sh(cmd) {
  */
 
 function updateMetaInfo() {
-  console.log("Updating Manga Metadata...");
+  logger.info("Updating Manga Metadata...");
   sh(`python3 ${__dirname}/scripts/metadata_dl_manga.py`)
     .then(function (data) {
-      if (data.stdout.length) console.log(data.stdout);
-      if (data.stderr.length) console.error(data.stderr);
+      if (data.stdout.length) logger.info(data.stdout);
+      if (data.stderr.length) logger.error(data.stderr);
     })
     .catch(function (err) {
-      console.error(err);
+      logger.error(err);
     });
 
-  console.log("Updating Video Metadata...");
+  logger.info("Updating Video Metadata...");
   sh(`python3 ${__dirname}/scripts/metadata_dl_video.py`)
     .then(function (data) {
-      if (data.stdout.length) console.log(data.stdout);
-      if (data.stderr.length) console.error(data.stderr);
+      if (data.stdout.length) logger.info(data.stdout);
+      if (data.stderr.length) logger.error(data.stderr);
     })
     .catch(function (err) {
-      console.error(err);
+      logger.error(err);
     });
 
   updateMediaCollectionIndex();
@@ -448,10 +396,10 @@ function updateMetaInfo() {
 async function getDBConnection() {
   try {
     await db_client.connect();
-    console.log("Connected to MongoDB");
+    logger.info("Connected to MongoDB");
     return db_client;
   } catch (error) {
-    console.error("Error connecting to MongoDB", error);
+    logger.error("Error connecting to MongoDB", error);
     return null;
   }
 }
@@ -459,10 +407,10 @@ async function getDBConnection() {
 async function dbDisconnect() {
   try {
     await db_client.close();
-    console.log("Closed MongoDB connection");
+    logger.info("Closed MongoDB connection");
     return true;
   } catch (error) {
-    console.error("Error closing MongoDB connection", error);
+    logger.error("Error closing MongoDB connection", error);
     return false;
   }
 }
@@ -470,94 +418,6 @@ async function dbDisconnect() {
 /*
  * Initialization Functions
  */
-
-/**
- *  @brief Helper method for making sure that the required configuration
- *         fields are present in the config file.
- *  @returns True if all required fields are present, false otherwise.
- */
-function validateConfig() {
-  let missing_header = false;
-  let missing_params = false;
-
-  ////////////////////////////////////////////////////////////////
-  // Server paramaters
-  ////////////////////////////////////////////////////////////////
-  if (config.server == undefined) {
-    console.error("config.ini Is missing the server header.");
-    missing_header = true;
-  } else {
-    let required_params = [
-      "PollingRateMetadataUpdatesSeconds",
-      "DbAddress",
-      "ServerPort",
-      "LimitFailedLoginAttempts",
-      "LimitUnauthorizedRequestsWindowMs",
-      "LimitUnauthorizedRequestsCount",
-    ];
-    for (let param of required_params) {
-      if (config.server[param] == undefined) {
-        console.error(`config.ini [server] Is missing the ${param} parameter.`);
-        missing_params = true;
-      }
-    }
-  }
-
-  ////////////////////////////////////////////////////////////////
-  // Folders paramaters
-  ////////////////////////////////////////////////////////////////
-  if (config.folders == undefined) {
-    console.error("config.ini Is missing the folders header.");
-    missing_header = true;
-  } else {
-    let required_params = [
-      "FolderManga",
-      "FolderVideo",
-      "FolderMusic",
-      "FolderImage",
-      "FolderSubtitles",
-      "FolderLuxAssets",
-      "ThumbnailCacheVideo",
-      "ThumbnailCacheMusic",
-      "ThumbnailCacheManga",
-      "CoverArtCacheVideo",
-      "CoverArtCacheMusic",
-      "CoverArtCacheManga",
-    ];
-    for (let param of required_params) {
-      if (config.folders[param] == undefined) {
-        console.error(
-          `config.ini [folders] Is missing the ${param} parameter.`
-        );
-        missing_params = true;
-      }
-    }
-  }
-
-  ////////////////////////////////////////////////////////////////
-  // WebScraping parameters
-  ////////////////////////////////////////////////////////////////
-  if (config.webscraping == undefined) {
-    console.error("config.ini Is missing the webscraping header.");
-    missing_header = true;
-  } else {
-    let required_params = [
-      "RequiredMetadataVideo",
-      "RequiredMetadataManga",
-      "UserAgent",
-    ];
-    for (let param of required_params) {
-      if (config.webscraping[param] == undefined) {
-        console.error(
-          `config.ini [webscraping] Is missing the ${param} parameter.`
-        );
-        missing_params = true;
-      }
-    }
-  }
-
-  return !missing_header && !missing_params;
-}
 
 /**
  *  @brief Helper method for making sure that the required environment
@@ -569,7 +429,7 @@ function setupEnv() {
     process.env.JWT_SECRET == undefined ||
     process.env.PASSWORD_PEPPER == undefined
   ) {
-    console.log("Generating new secrets...");
+    logger.info("Generating new secrets...");
     const str_out =
       `JWT_SECRET=${bcrypt.genSaltSync(10)}\n` +
       `PASSWORD_PEPPER=${bcrypt.genSaltSync(10)}`;
@@ -612,7 +472,7 @@ async function init() {
   // If not, then prompt the user to set one.
   // Use create_password.py to do this.
   if (!fs.existsSync("./.pwd_hash")) {
-    console.log("No password hash found, creating one now.");
+    logger.info("No password hash found, creating one now.");
     await sh(`python3 ${__dirname}/scripts/create_password.py`);
   }
 
@@ -624,12 +484,12 @@ async function init() {
       useUnifiedTopology: true,
     });
 
-    console.log("DB is online.");
+    logger.info("DB is online.");
   } catch (err) {
-    console.error("Failed to connect to DB.");
+    logger.error("Failed to connect to DB.");
   }
 
-  // Begin MetaData Udpates Polling
+  // Begin MetaData Updates Polling
   polling();
 }
 
@@ -637,7 +497,7 @@ async function init() {
  *  @brief  Initialize the server index of available media.
  */
 async function updateMediaCollectionIndex() {
-  console.log("Updating Collection Index...");
+  logger.info("Updating Collection Index...");
 
   const db = await getDBConnection();
 
@@ -670,8 +530,7 @@ async function updateMediaCollectionIndex() {
     }
     _mediaCollectionIndex["manga"] = { index: index, isGood: true };
   } catch (err) {
-    console.error(err);
-    console.error("Failed to update the Manga index.");
+    logger.error(`Failed to update the Manga index due to ${err}.`);
 
     // Flag the data as invalid.
     _mediaCollectionIndex["manga"]["isGood"] = false;
@@ -700,8 +559,7 @@ async function updateMediaCollectionIndex() {
     }
     _mediaCollectionIndex["video"] = { index: index, isGood: true };
   } catch (err) {
-    console.error(err);
-    console.error("Failed to update the Video index.");
+    logger.error(`Failed to update the Video index due to ${err}.`);
 
     // Flag the data as invalid.
     _mediaCollectionIndex["video"]["isGood"] = false;
@@ -714,8 +572,7 @@ async function updateMediaCollectionIndex() {
   /// NOTE: This is still done using File location, music is not in DB yet
   fs.readdir(config.folders.FolderMusic, function (err, files) {
     if (err) {
-      console.error(err);
-      console.error("Failed to update media index.");
+      logger.error(`Failed to update music index due to ${err}.`);
 
       // Flag the data as invalid.
       _mediaCollectionIndex["music"]["isGood"] = false;
@@ -759,13 +616,13 @@ function splitSubtitleFile(subtitle_file) {
  *  @brief  Initialize the server index of available media.
  */
 function updateMediaFilesystemIndex() {
-  console.log("Updating Filesystem Index...");
+  logger.info("Updating Filesystem Index...");
 
   // MANGA INDEX
   // Loop through all titles in the manga directory
   fs.readdir(config.folders.FolderManga, function (err_title, titles) {
     if (err_title) {
-      console.error(err_title);
+      logger.error(err_title);
       return;
     }
     for (let title of titles) {
@@ -784,7 +641,7 @@ function updateMediaFilesystemIndex() {
         }
         titleData["chapters"] = chapters;
       } catch (err) {
-        console.error(err);
+        logger.error(err);
         titleData["isGood"] = false;
       }
 
@@ -796,7 +653,7 @@ function updateMediaFilesystemIndex() {
   // Loop through all titles in the video directory
   fs.readdir(config.folders.FolderVideo, function (err_title, titles) {
     if (err_title) {
-      console.error(err_title);
+      logger.error(err_title);
       return;
     }
     for (let title of titles) {
@@ -810,7 +667,7 @@ function updateMediaFilesystemIndex() {
         const episodes = fs.readdirSync(titleDir);
         titleData["episodes"] = episodes;
       } catch (err) {
-        console.error(err);
+        logger.error(err);
         titleData["isGood"] = false;
       }
 
@@ -823,7 +680,7 @@ function updateMediaFilesystemIndex() {
   // [title][episode] -> Subtitle file
   fs.readdir(config.folders.FolderSubtitles, function (err_title, titles) {
     if (err_title) {
-      console.error(err_title);
+      logger.error(err_title);
       return;
     }
     for (let title of titles) {
@@ -844,7 +701,7 @@ function updateMediaFilesystemIndex() {
           titleData["subtitleMap"][episodeName].push(subtitle_file);
         }
       } catch (err) {
-        console.error(err);
+        logger.error(err);
         titleData["isGood"] = false;
       }
 
@@ -890,7 +747,7 @@ async function queryDbByTitle(titles_str, dbname, filter_db_privates, res) {
         metadata["cover_addr"] =
           _mediaCollectionIndex[dbname]["index"][title]["cover_addr"];
       } catch (err) {
-        console.error(err);
+        logger.error(err);
       }
 
       dbDisconnect();
@@ -898,7 +755,7 @@ async function queryDbByTitle(titles_str, dbname, filter_db_privates, res) {
       return;
     } catch (error) {
       dbDisconnect();
-      console.error(error);
+      logger.error(error);
       res.status(500).send("Failure to query database.");
       return;
     }
@@ -924,7 +781,7 @@ async function queryDbByTitle(titles_str, dbname, filter_db_privates, res) {
             doc["cover_addr"] =
               _mediaCollectionIndex[dbname]["index"][title]["cover_addr"];
           } catch (err) {
-            console.error(err);
+            logger.error(err);
           }
           metadata_list.push({ data: doc, status: 200 });
         }
@@ -961,7 +818,7 @@ async function queryDbByTitle(titles_str, dbname, filter_db_privates, res) {
       return;
     } catch (error) {
       dbDisconnect();
-      console.error(error);
+      logger.error(error);
       res.status(500).send("Failure to query database.");
       return;
     }
@@ -1003,8 +860,9 @@ function parseSubtitlesFileToChewie(filePath) {
         });
       }
     } catch (error) {
-      console.error(error);
-      console.error(`Failed to parse subtitles from ${filePath}`);
+      logger.error(
+        `Failed to parse subtitles from ${filePath} due to ${error}`
+      );
       return { subtitles: [], status: false };
     }
 
@@ -1031,14 +889,15 @@ function parseSubtitlesFileToChewie(filePath) {
         i++;
       }
     } catch (error) {
-      console.error(error);
-      console.error(`Failed to parse subtitles from ${filePath}`);
+      logger.error(
+        `Failed to parse subtitles from ${filePath} due to ${error}`
+      );
       return { subtitles: [], status: false };
     }
 
     return { subtitles: subtitles, status: true };
   } else {
-    console.warn(
+    logger.error(
       `Request made for subtitles format we don't support on episode ${filePath}`
     );
     return { subtitles: [], status: false };
@@ -1091,9 +950,6 @@ function isReqJWTValid(req) {
 }
 
 app.get("/GetPepper", function (req, res) {
-  var ip = req.headers.host ?? req.ip;
-  console.log(`${ip} requested the pepper.`);
-
   const secretKey = process.env.PASSWORD_PEPPER;
   if (secretKey == undefined) {
     res.status(500).send("Server is missing JWT secret key.");
@@ -1104,7 +960,6 @@ app.get("/GetPepper", function (req, res) {
 
 app.post("/GetAuthToken", function (req, res) {
   var ip = req.headers.host ?? req.ip;
-  console.log(`${ip} requested an auth token.`);
 
   // Parse request string
   if (!req.body.hasOwnProperty("pwdHash")) {
@@ -1121,7 +976,7 @@ app.post("/GetAuthToken", function (req, res) {
   if (!fs.existsSync("./.pwd_hash")) {
     // Leave a trace that someone tried to auth
     // even though there is no password hash.
-    console.log(
+    logger.error(
       "No password hash found, one must be created. " +
         "Please run create_password.py"
     );
@@ -1136,7 +991,7 @@ app.post("/GetAuthToken", function (req, res) {
   // Load the password hash
   fs.readFile("./.pwd_hash", function (err, pwdHashOnFile) {
     if (err) {
-      console.error(err);
+      logger.error(err);
       res.status(500).send("Server failed to read password hash.");
       return;
     }
@@ -1169,7 +1024,6 @@ app.post("/GetAuthToken", function (req, res) {
 
 app.get("/GetMangaCollectionIndex", function (req, res) {
   var ip = req.headers.host ?? req.ip;
-  console.log(`${ip} requested manga collection index.`);
 
   // Check the jwt in the authorization header
   const err = isReqJWTValid(req);
@@ -1193,7 +1047,7 @@ app.get("/GetMangaMetaDataByTitle", function (req, res) {
 
   // Extract the title from the request
   if (!req.query.hasOwnProperty("titles")) {
-    console.log(`${ip} made a bad request for manga metadata.`);
+    logger.info(`${ip} made a bad request for manga metadata.`);
     res
       .status(400)
       .send(
@@ -1202,9 +1056,6 @@ app.get("/GetMangaMetaDataByTitle", function (req, res) {
     return;
   }
   const titles_str = req.query.titles;
-
-  // Logging
-  console.log(`${ip} requested manga(s) \"${titles_str}\" metadata.`);
 
   // Check the jwt in the authorization header
   const err = isReqJWTValid(req);
@@ -1233,7 +1084,7 @@ app.get("/GetMangaChaptersByTitle", function (req, res) {
 
   // Parse request
   if (!req.query.hasOwnProperty("titles")) {
-    console.log(`${ip} made a bad request for chapter index.`);
+    logger.info(`${ip} made a bad request for chapter index.`);
     res
       .status(400)
       .send(
@@ -1242,9 +1093,6 @@ app.get("/GetMangaChaptersByTitle", function (req, res) {
     return;
   }
   const titles_str = req.query.titles;
-
-  // Logging
-  console.log(`${ip} requested manga "${titles_str}" chapter index.`);
 
   // Check the jwt in the authorization header
   const err = isReqJWTValid(req);
@@ -1289,7 +1137,6 @@ app.get("/GetMangaChaptersByTitle", function (req, res) {
 
 app.get("/GetVideoCollectionIndex", function (req, res) {
   var ip = req.headers.host ?? req.ip;
-  console.log(`${ip} requested video collection index.`);
 
   // Check the jwt in the authorization header
   const err = isReqJWTValid(req);
@@ -1322,9 +1169,6 @@ app.get("/GetVideoMetaDataByTitle", function (req, res) {
     return;
   }
   const titles_str = req.query.titles;
-
-  // Logging
-  console.log(`${ip} requested video(s) \"${titles_str}\" metadata.`);
 
   // Check the jwt in the authorization header
   const err = isReqJWTValid(req);
@@ -1361,9 +1205,6 @@ app.get("/GetVideoEpisodesByTitle", function (req, res) {
     return;
   }
   const titles_str = req.query.titles;
-
-  // Logging
-  console.log(`${ip} requested videos "${titles_str}" episode index.`);
 
   // Check the jwt in the authorization header
   const err = isReqJWTValid(req);
@@ -1422,11 +1263,6 @@ app.get("/GetSubtitleSelectionsForEpisode", function (req, res) {
   }
   const title_str = req.query.title;
   const episode_str = req.query.episode;
-
-  // Logging
-  console.log(
-    `${ip} requested "${title_str}" - "${episode_str}" Subtitles Selections.`
-  );
 
   // Check the jwt in the authorization header
   const err = isReqJWTValid(req);
@@ -1507,11 +1343,6 @@ app.get("/GetSubtitlesChewieFmt", function (req, res) {
   const title_str = req.query.title;
   const episode_str = req.query.episode;
   const track_str = req.query.track;
-
-  // Logging
-  console.log(
-    `${ip} requested "${track_str}" subtitles for "${title_str}" - "${episode_str}".`
-  );
 
   // Check the jwt in the authorization header
   const err = isReqJWTValid(req);

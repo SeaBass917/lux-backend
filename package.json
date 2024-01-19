@@ -21,6 +21,7 @@
     "jsonwebtoken": "^9.0.2",
     "mongodb": "^5.8.1",
     "srt-parser-2": "^1.2.3",
+    "stack-trace": "^1.0.0-pre2",
     "winston": "^3.11.0",
     "winston-daily-rotate-file": "^4.7.1"
   }
