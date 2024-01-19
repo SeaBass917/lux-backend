@@ -112,6 +112,8 @@ app.use(
     optionsSuccessStatus: 200,
   })
 );
+// Create a static path to the public folder
+app.use("/public", express.static(`${__dirname}/public`));
 // Extend bandwidth from the server
 app.use(
   bodyParser.json({
@@ -125,8 +127,6 @@ app.use(
     extended: true,
   })
 );
-// Create a static path to the public folder
-app.use("/public", express.static(`${__dirname}/public`));
 // Log all traffic
 app.use(function (req, res, next) {
   // Break up the request into it's components

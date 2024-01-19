@@ -1,12 +1,16 @@
-cert.pem
-key.pem
-package-lock.json
-
+# IDE, Framework, OS, etc.
 node_modules/
 .vscode/
+**/__pycache__/
 
-manga
-music
-images
-videos
-subtitles
+# Only need the assets in the public interface
+# Everything else is dynamically generated.
+public/*
+!public/assets
+
+# Keys, secrets, etc.
+cert.pem
+key.pem
+.pwd_hash
+.secrets.env
+.server.env
