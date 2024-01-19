@@ -5,7 +5,7 @@ import { fileURLToPath } from "url";
 import winston from "winston";
 import "winston-daily-rotate-file";
 
-import config from "../config_manager/config_manager.js";
+import config from "./config_manager.js";
 
 // Determine the current working directory of the main application
 // So that we can filter that out of the logging.

@@ -15,8 +15,8 @@ import { dirname } from "path";
 import srtParser2 from "srt-parser-2";
 import { fileURLToPath } from "url";
 
-import config from "./config_manager/config_manager.js";
-import logger from "./logging/logging.js";
+import config from "./utilities/config_manager.js";
+import logger from "./utilities/logging.js";
 
 /*******************************************************************************
  * Initialize any server variables, config, logging.
@@ -31,16 +31,6 @@ const __filename = fileURLToPath(import.meta.url);
  * Full path to the current working directory.
  */
 const __dirname = dirname(__filename);
-
-/**
- * Error codes the server can close with.
- */
-const ErrorCodes = {
-  SUCCESS: 0,
-  UNKNOWN: -1,
-  CONFIG_ERROR: -2,
-  ENV_ERROR: -3,
-};
 
 // Load the .secrets.env data
 // They can now be accessed from `process.env.${...}`
@@ -329,17 +319,6 @@ function blacklistIP(ip, userAgent = "Unknown") {
       if (err) logger.error(`Failed to add ${ip} to blacklist.tsv`);
     }
   );
-}
-
-/**
- *  @brief  Handle the shutdown of the server.
- */
-function shutdown(statusCode = ErrorCodes.SUCCESS) {
-  logger.info("Shutting down the server...");
-  server.close(() => {
-    logger.info("Server has been gracefully closed.");
-    process.exit(statusCode);
-  });
 }
 
 /**
