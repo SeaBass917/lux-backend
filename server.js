@@ -1,7 +1,5 @@
 "use strict";
 
-import parseAss from "ass-parser";
-import bcrypt from "bcrypt";
 import bodyParser from "body-parser";
 import * as child from "child_process";
 import cors from "cors";
@@ -9,17 +7,26 @@ import dotenv from "dotenv";
 import express from "express";
 import expressRateLimit from "express-rate-limit";
 import fs from "fs";
-import jwt from "jsonwebtoken";
-import * as mongodb from "mongodb";
 import { dirname } from "path";
-import srtParser2 from "srt-parser-2";
 import { fileURLToPath } from "url";
 
-import config from "./utilities/config_manager.js";
-import logger from "./utilities/logging.js";
+import config from "./utilities/config.js";
+import logger from "./utilities/logger.js";
+import {
+  createMediaPath,
+  getJWTFromReq,
+  isReqJWTValid,
+  removeMediaPathSync,
+} from "./auth/auth.js";
+import { ExitCodes, shutdown } from "./utilities/shutdown.js";
+import { publicIpv4 } from "public-ip";
+
+import authRoutes from "./routes/auth_routes.js";
+import mangaRoutes from "./routes/manga_routes.js";
+import videoRoutes from "./routes/video_routes.js";
 
 /*******************************************************************************
- * Initialize any server variables, config, logging.
+ * Initialize any server variables.
  ******************************************************************************/
 
 /**
@@ -39,7 +46,7 @@ dotenv.config({
 });
 
 /*******************************************************************************
- * Express Configurations and Middleware
+ * Middleware (TODO: Move to separate folder)
  ******************************************************************************/
 var app = express();
 // CORS config for react
@@ -82,6 +89,18 @@ app.use(function (req, res, next) {
   // Log the request
   logger.info(`${ip} ${method} ${endpoint} ${auth} ${query}`);
 
+  next();
+});
+// Log requests in the _ipHistory
+app.use((req, res, next) => {
+  res.on("finish", () => {
+    const ip = req.headers.host ?? req.ip;
+    if (res.statusCode >= 400) {
+      recordIPFailedAttempt(ip, req.get("User-Agent"));
+    } else {
+      recordIPSuccessfulAttempt(ip);
+    }
+  });
   next();
 });
 // Blacklist IPs that are in the blacklist.tsv file
@@ -133,65 +152,83 @@ app.use(
     },
   })
 );
+// Filter out unauthorized requests
+// Ensure a media path is present if the request is authorized
+app.use(function (req, res, next) {
+  // There are only two endpoints where we allow unauthorized requests
+  // 1. The auth endpoint -- Cuz that's how they get authorized
+  // 2. The public endpoint -- It's in the name
+  if (req.path.startsWith("/auth") || req.path.startsWith("/public")) {
+    next();
+    return;
+  }
+
+  // Check the jwt in the authorization header
+  const err = isReqJWTValid(req);
+  if (err.length) {
+    res.status(401).send(err);
+    return;
+  }
+
+  // Ensure that the jwt path is set up
+  const token = getJWTFromReq(req);
+  createMediaPath(token);
+
+  next();
+});
+
+/*******************************************************************************
+ * Routes
+ ******************************************************************************/
+app.use("/auth", authRoutes);
+app.use("/manga", mangaRoutes);
+app.use("/video", videoRoutes);
+
+/*******************************************************************************
+ * Things to do before we start listening.
+ ******************************************************************************/
+
+// Remove any old signed folders in the public directory
+removeMediaPathSync();
+
+// Check to see if a password is on file
+// If not, then we can not operate, shutdown.
+if (!fs.existsSync("./.pwd_hash")) {
+  logger.error(
+    "No password hash found, please create one with scripts/create_password.py."
+  );
+  shutdown(null, ExitCodes.ADMIN_ERROR);
+}
+
+/**
+ *  @brief  Callback for the timer that checks for updates to the media.
+ */
+function checkForMediaUpdates() {
+  updateMetaInfo();
+  setTimeout(
+    checkForMediaUpdates,
+    config.server.PollingRateMediaSeconds * 1000
+  );
+}
+
+// Begin MetaData Updates Polling
+checkForMediaUpdates();
+
+/*******************************************************************************
+ * Start Application
+ ******************************************************************************/
 
 // Start listening
 var server = app.listen(config.server.ServerPort, async function () {
-  let address = server.address();
-  let { stdout } = await sh("curl ifconfig.me");
-  logger.info(`App listening at http://${stdout}:${address.port}`);
-
-  // Start the server
-  init();
+  // Log the server start, using the public IP address
+  publicIpv4().then((ip) => {
+    logger.info(`App listening at http://${ip}:${server.address().port}`);
+  });
 });
 
-/**
- * Schema as follows:
- * ```
- * {
- *     manga: {
- *         title0: {
- *             chapters: {
- *                 ch1: ["pg1", "pg2", ...],
- *                 ...
- *             },
- *             titlePath: "path/to/title0",
- *             isGood: false/true,
- *         },
- *         ...
- *     }
- *     video: {
- *         title0: {
- *             episodes: ["ep0", "ep1", ...],
- *             titlePath: "path/to/title0",
- *             isGood: false/true,
- *         }
- *     subtitles: {
- *         title0: {
- *             subtitleMap: {
- *                 ep0: ["ep0.Eng.srt", ...],
- *                 ep1: ["ep1.Eng.srt", ...],
- *                 ...
- *             },
- *             titlePath: "path/to/title0",
- *             isGood: false/true,
- *         }
- *     }
- *     ...
- * }
- * ```
- */
-var _mediaFSIndex = {
-  manga: {},
-  video: {},
-  music: {},
-  subtitles: {},
-};
-
-var _mediaCollectionIndex = {
-  manga: { index: {}, isGood: false },
-  video: { index: {}, isGood: false },
-  music: { index: {}, isGood: false },
-};
+/*******************************************************************************
+ * TODO: Organize the following code into modules or sections.
+ ******************************************************************************/
 
 // Record of IPs that have made requests to the server
 // Used to prevent spamming the server with requests
@@ -201,62 +238,9 @@ var _mediaCollectionIndex = {
 //  - flag for if the IP has sent us a successful request
 var _ipHistory = {};
 
-var db_client;
-
 /*
  * Helper Functions
  */
-
-/**
- * @brief  Helper function for converting a jwt token into a folder name.
- * @param {String} token jwt token of the client.
- * @returns {String} An OS friendly name based on the JWT.
- */
-function convertTokenToFolderName(token) {
-  if (token.length < 25) return token;
-  return token.substring(token.length - 25);
-}
-
-/**
- * @brief  Helper function for checking if the media path is set for the client.
- * @param {String} token jwt token of the client.
- */
-function isMediaPathSet(token) {
-  let tokenShort = convertTokenToFolderName(token);
-
-  return fs.existsSync(`./public/${tokenShort}`);
-}
-
-/**
- * @brief  Helper function for creating the media path for the client.
- * @param {String} token jwt token of the client.
- */
-function createMediaPath(token) {
-  if (isMediaPathSet(token)) return;
-
-  let tokenShort = convertTokenToFolderName(token);
-
-  // Make the obscured folder
-  fs.mkdirSync(`./public/${tokenShort}`);
-
-  let folderList = [
-    ["manga", config.folders.FolderManga],
-    ["video", config.folders.FolderVideo],
-    ["music", config.folders.FolderMusic],
-    ["image", config.folders.FolderImage],
-    ["subtitles", config.folders.FolderSubtitles],
-    ["lux-assets", config.folders.FolderLuxAssets],
-  ];
-
-  // Crete symbolic links to the media folders
-  for (let folder of folderList) {
-    fs.symlinkSync(
-      folder[1],
-      `./public/${tokenShort}/${folder[0]}`,
-      "junction"
-    );
-  }
-}
 
 /**
  * @brief  Helper function for recording failed login attempts.
@@ -362,1035 +346,4 @@ function updateMetaInfo() {
     .catch(function (err) {
       logger.error(err);
     });
-
-  updateMediaCollectionIndex();
-
-  updateMediaFilesystemIndex();
 }
-
-/*
- * Database Functions
- */
-
-async function getDBConnection() {
-  try {
-    await db_client.connect();
-    logger.info("Connected to MongoDB");
-    return db_client;
-  } catch (error) {
-    logger.error("Error connecting to MongoDB", error);
-    return null;
-  }
-}
-
-async function dbDisconnect() {
-  try {
-    await db_client.close();
-    logger.info("Closed MongoDB connection");
-    return true;
-  } catch (error) {
-    logger.error("Error closing MongoDB connection", error);
-    return false;
-  }
-}
-
-/*
- * Initialization Functions
- */
-
-/**
- *  @brief Helper method for making sure that the required environment
- *        variables are present.
- *        Randomly generate tokens and save them for later.
- */
-function setupEnv() {
-  if (
-    process.env.JWT_SECRET == undefined ||
-    process.env.PASSWORD_PEPPER == undefined
-  ) {
-    logger.info("Generating new secrets...");
-    const str_out =
-      `JWT_SECRET=${bcrypt.genSaltSync(10)}\n` +
-      `PASSWORD_PEPPER=${bcrypt.genSaltSync(10)}`;
-    fs.writeFileSync(".secrets.env", str_out);
-
-    // Reload the .env file
-    dotenv.config();
-  }
-}
-
-/**
- *  @brief  Callback for the timer that checks for updates to the metadata.
- */
-function polling() {
-  updateMetaInfo();
-
-  setTimeout(polling, config.server.PollingRateMetadataUpdatesSeconds * 1000);
-}
-
-/**
- *  @brief  Initialize the server.
- */
-async function init() {
-  // Ensure environment variables are set
-  // If they are already set, then this does nothing.
-  setupEnv();
-
-  // Remove any old signed folders in the public directory
-  var folders = fs.readdirSync("./public");
-  for (let folder of folders) {
-    if (folder == "assets") continue;
-    var files = fs.readdirSync(`./public/${folder}`);
-    for (let file of files) {
-      fs.rmSync(`./public/${folder}/${file}`);
-    }
-    fs.rmdirSync(`./public/${folder}`);
-  }
-
-  // Check to see if a password is on file
-  // If not, then prompt the user to set one.
-  // Use create_password.py to do this.
-  if (!fs.existsSync("./.pwd_hash")) {
-    logger.info("No password hash found, creating one now.");
-    await sh(`python3 ${__dirname}/scripts/create_password.py`);
-  }
-
-  // Connect to DB
-  // (Must go second!)
-  try {
-    db_client = new mongodb.MongoClient(config.server.DbAddress, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-    });
-
-    logger.info("DB is online.");
-  } catch (err) {
-    logger.error("Failed to connect to DB.");
-  }
-
-  // Begin MetaData Updates Polling
-  polling();
-}
-
-/**
- *  @brief  Initialize the server index of available media.
- */
-async function updateMediaCollectionIndex() {
-  logger.info("Updating Collection Index...");
-
-  const db = await getDBConnection();
-
-  const db_media = db.db("mediaMetadata");
-
-  // Manga Index
-  try {
-    const docs_manga = await db_media.collection("manga").find({}).toArray();
-
-    var index = {};
-    for (let doc of docs_manga) {
-      var data = {
-        title: doc["title"],
-        nsfw: doc["nsfw"],
-        author: doc["author"],
-        dateAdded: doc["dateAdded"],
-      };
-
-      // If the title is not on file, discard this record
-      if (!fs.existsSync(`${config.folders.FolderManga}/${data["title"]}`)) {
-        continue;
-      }
-
-      // If the cover_addr is still empty, then store the icon_addr
-      if (!fs.existsSync(data["cover_addr"])) {
-        data["cover_addr"] = data["icon_addr"];
-      }
-
-      index[doc["title"]] = data;
-    }
-    _mediaCollectionIndex["manga"] = { index: index, isGood: true };
-  } catch (err) {
-    logger.error(`Failed to update the Manga index due to ${err}.`);
-
-    // Flag the data as invalid.
-    _mediaCollectionIndex["manga"]["isGood"] = false;
-  }
-
-  // Video Index
-  try {
-    const docs_video = await db_media.collection("video").find({}).toArray();
-
-    var index = {};
-    for (let doc of docs_video) {
-      var data = {
-        title: doc["title"],
-        nsfw: doc["nsfw"],
-        dateAdded: doc["dateAdded"],
-        yearstart: doc["yearstart"],
-        description: doc["description"],
-      };
-
-      // If the title is not on file, discard this record
-      if (!fs.existsSync(`${config.folders.FolderVideo}/${data["title"]}`)) {
-        continue;
-      }
-
-      index[doc["title"]] = data;
-    }
-    _mediaCollectionIndex["video"] = { index: index, isGood: true };
-  } catch (err) {
-    logger.error(`Failed to update the Video index due to ${err}.`);
-
-    // Flag the data as invalid.
-    _mediaCollectionIndex["video"]["isGood"] = false;
-  }
-
-  // Close the DB
-  dbDisconnect();
-
-  // Music Index
-  /// NOTE: This is still done using File location, music is not in DB yet
-  fs.readdir(config.folders.FolderMusic, function (err, files) {
-    if (err) {
-      logger.error(`Failed to update music index due to ${err}.`);
-
-      // Flag the data as invalid.
-      _mediaCollectionIndex["music"]["isGood"] = false;
-      return;
-    }
-
-    var index = {};
-    for (let title of files) {
-      index[title] = {
-        title: title,
-      };
-    }
-    _mediaCollectionIndex["music"] = { index: index, isGood: true };
-  });
-}
-
-/**
- * Utility method for interperting the encoded information
- * in the subtitle file names.
- * @param {String} subtitle_file Filename of the subtitles file.
- * @returns The filename broken into it's 3 components:
- * ```
- * "Show X Episode 1.Eng.srt" -> {
- *      episodeName: "Show X Episode 1",
- *      trackKey: "Eng",
- *      encoding: "srt",
- *  }
- *  ```
- */
-function splitSubtitleFile(subtitle_file) {
-  let eles = subtitle_file.split(".");
-  if (eles.length < 3) return "";
-  return {
-    episodeName: eles.slice(0, eles.length - 2).join("."),
-    trackKey: eles[eles.length - 2],
-    encoding: eles[eles.length - 1],
-  };
-}
-
-/**
- *  @brief  Initialize the server index of available media.
- */
-function updateMediaFilesystemIndex() {
-  logger.info("Updating Filesystem Index...");
-
-  // MANGA INDEX
-  // Loop through all titles in the manga directory
-  fs.readdir(config.folders.FolderManga, function (err_title, titles) {
-    if (err_title) {
-      logger.error(err_title);
-      return;
-    }
-    for (let title of titles) {
-      const titleDir = config.folders.FolderManga + title;
-
-      // For each title get the list of chapters,
-      // and for each of those chapters get a list of pages.
-      // That completes an index for this title,
-      // store that index and continue to the next title
-      var titleData = { chapters: {}, isGood: true };
-      try {
-        var chapters = {};
-        for (let chapter of fs.readdirSync(titleDir)) {
-          const pages = fs.readdirSync(`${titleDir}/${chapter}`);
-          chapters[chapter] = pages;
-        }
-        titleData["chapters"] = chapters;
-      } catch (err) {
-        logger.error(err);
-        titleData["isGood"] = false;
-      }
-
-      _mediaFSIndex["manga"][title] = titleData;
-    }
-  });
-
-  // VIDEO INDEX
-  // Loop through all titles in the video directory
-  fs.readdir(config.folders.FolderVideo, function (err_title, titles) {
-    if (err_title) {
-      logger.error(err_title);
-      return;
-    }
-    for (let title of titles) {
-      const titleDir = config.folders.FolderVideo + title;
-
-      // For each title get the list of episodes,
-      // That list is the index
-      // Store that index and continue to the next title
-      var titleData = { episodes: [], isGood: true };
-      try {
-        const episodes = fs.readdirSync(titleDir);
-        titleData["episodes"] = episodes;
-      } catch (err) {
-        logger.error(err);
-        titleData["isGood"] = false;
-      }
-
-      _mediaFSIndex["video"][title] = titleData;
-    }
-  });
-
-  // SUBTITLES INDEX
-  // Loop through all subtitles and build a map that can be referenced by
-  // [title][episode] -> Subtitle file
-  fs.readdir(config.folders.FolderSubtitles, function (err_title, titles) {
-    if (err_title) {
-      logger.error(err_title);
-      return;
-    }
-    for (let title of titles) {
-      const titleDir = config.folders.FolderSubtitles + title;
-
-      // For each title loop through each subtitle file in the folder
-      // Collect all subtitles for each episode in a subtitleMap,
-      // keyed by episode. Store said map by title.
-      var titleData = { subtitleMap: {}, titlePath: titleDir, isGood: true };
-      try {
-        for (let subtitle_file of fs.readdirSync(titleDir)) {
-          let { episodeName } = splitSubtitleFile(subtitle_file);
-
-          //
-          if (!titleData["subtitleMap"][episodeName]) {
-            titleData["subtitleMap"][episodeName] = [];
-          }
-          titleData["subtitleMap"][episodeName].push(subtitle_file);
-        }
-      } catch (err) {
-        logger.error(err);
-        titleData["isGood"] = false;
-      }
-
-      _mediaFSIndex["subtitles"][title] = titleData;
-    }
-  });
-
-  // Music Index
-  // TODO:
-}
-
-async function queryDbByTitle(titles_str, dbname, filter_db_privates, res) {
-  const titles_req = new Set(titles_str.split(","));
-
-  // Get DB connection
-  const db = await getDBConnection();
-  const db_media = db.db("mediaMetadata");
-
-  // Query the DB
-  // If just quering a single title, find with query filter
-  // If many, then findall -> filter
-  // NOTE: DB collection is on the order of <1MB
-  // Single Document Query
-  if (titles_req.size == 1) {
-    const title = titles_str;
-    try {
-      const docs = await db_media
-        .collection(dbname)
-        .find({ title: title })
-        .toArray();
-
-      // Error Handling
-      if (docs.length < 1) {
-        dbDisconnect();
-        res.status(404).send(`No such media on file: ${title}.`);
-        return;
-      }
-
-      // Remove any private db info before returning the document.
-      let metadata = docs[0];
-      filter_db_privates(metadata);
-      try {
-        metadata["cover_addr"] =
-          _mediaCollectionIndex[dbname]["index"][title]["cover_addr"];
-      } catch (err) {
-        logger.error(err);
-      }
-
-      dbDisconnect();
-      res.status(207).send([{ data: metadata, status: 200 }]);
-      return;
-    } catch (error) {
-      dbDisconnect();
-      logger.error(error);
-      res.status(500).send("Failure to query database.");
-      return;
-    }
-  }
-  // Many title query
-  else {
-    try {
-      const docs = await db_media.collection(dbname).find({}).toArray();
-
-      var metadata_list = [];
-
-      // Loop through all docs in DB and extract the ones who's
-      // title match one of the titles requested
-      var titles_found = new Set();
-      for (let doc of docs) {
-        const title = doc["title"];
-        if (titles_req.has(title)) {
-          titles_found.add(title);
-
-          // Filter private DB info and add to list
-          filter_db_privates(doc);
-          try {
-            doc["cover_addr"] =
-              _mediaCollectionIndex[dbname]["index"][title]["cover_addr"];
-          } catch (err) {
-            logger.error(err);
-          }
-          metadata_list.push({ data: doc, status: 200 });
-        }
-      }
-
-      // Error checking
-      // If ALL titles are missing return a 404
-      if (titles_found.size == 0) {
-        dbDisconnect();
-        res
-          .status(404)
-          .send(`None of the requested ${dbname}s could be found.`);
-        return;
-      }
-
-      // If some titles are missing throw them in the list as failures
-      if (titles_found.size != titles_req.size) {
-        const missing_titles = new Set(
-          [...titles_req].filter((element) => !titles_found.has(element))
-        );
-        for (let missing_title of missing_titles) {
-          metadata_list.push({
-            data: { title: missing_title },
-            status: 404,
-            message: `\"${missing_title}\" not found in ${dbname} database.`,
-          });
-        }
-      }
-
-      dbDisconnect();
-
-      // Return all metadata acquired
-      res.status(207).send(metadata_list);
-      return;
-    } catch (error) {
-      dbDisconnect();
-      logger.error(error);
-      res.status(500).send("Failure to query database.");
-      return;
-    }
-  }
-}
-
-function parseSubtitlesFileToChewie(filePath) {
-  // Remove {...} blocks, and \\N they are not filtered by some ASS parsers
-  function cleanAssText(text) {
-    return text.replace(/{[^}]+}/g, "").replace(/\\N/g, "\n");
-  }
-
-  // '0:00:02.08' -> 2080ms
-  function convertAssTime(text) {
-    let bits = text.split(":");
-    let lilbits = bits[2].split(".");
-    let totalMS =
-      Number(bits[0]) * 3600000 +
-      Number(bits[1]) * 60000 +
-      Number(lilbits[0]) * 1000 +
-      Number(lilbits[1]) * 10;
-    return totalMS;
-  }
-
-  if (filePath.toLowerCase().endsWith(".srt")) {
-    let subtitles = [];
-
-    try {
-      // Loop through items in the SRTParser
-      // Build a list that fits the Dart Chewie Subtitles format.
-      let parser = new srtParser2();
-      let buffer = fs.readFileSync(filePath).toString();
-      for (let subtitle of parser.fromSrt(buffer)) {
-        subtitles.push({
-          index: subtitle.id,
-          start_ms: subtitle.startSeconds * 1000,
-          end_ms: subtitle.endSeconds * 1000,
-          text: subtitle.text,
-        });
-      }
-    } catch (error) {
-      logger.error(
-        `Failed to parse subtitles from ${filePath} due to ${error}`
-      );
-      return { subtitles: [], status: false };
-    }
-
-    return { subtitles: subtitles, status: true };
-  } else if (filePath.toLowerCase().endsWith(".ass")) {
-    let subtitles = [];
-
-    try {
-      // Loop through items in the ASSParser
-      // Build a list that fits the Dart Chewie Subtitles format.
-      let buffer = fs.readFileSync(filePath).toString();
-      let assObj = parseAss(buffer);
-      let events = assObj.find((ele) => ele.section == "Events");
-
-      let i = 0;
-      for (let { key, value } of events.body) {
-        if (key != "Dialogue") continue;
-        subtitles.push({
-          index: i,
-          start_ms: convertAssTime(value.Start),
-          end_ms: convertAssTime(value.End),
-          text: cleanAssText(value.Text),
-        });
-        i++;
-      }
-    } catch (error) {
-      logger.error(
-        `Failed to parse subtitles from ${filePath} due to ${error}`
-      );
-      return { subtitles: [], status: false };
-    }
-
-    return { subtitles: subtitles, status: true };
-  } else {
-    logger.error(
-      `Request made for subtitles format we don't support on episode ${filePath}`
-    );
-    return { subtitles: [], status: false };
-  }
-}
-
-/***************************************
- * Authentication
- **************************************/
-
-/**
- * Utility for extracting the JWT from the request.
- * @param {HttpRequest} req
- * @returns JWT from the request, or empty string if none was found.
- */
-function getJWTFromReq(req) {
-  if (!req.headers || !req.headers.authorization) {
-    return "";
-  }
-  const token_eles = req.headers.authorization.split(" ");
-  if (token_eles.length != 2) {
-    return "";
-  }
-  return token_eles[1];
-}
-
-/**
- * Check the request for a valid JWT in the header.
- * @param {HttpRequest} req
- * @returns Error string if there was a problem, otherwise empty string.
- */
-function isReqJWTValid(req) {
-  // Check the jwt in the authorization header
-  // If it is valid, then allow the request to continue
-  // If it is not valid, then return a 401
-  const token = getJWTFromReq(req);
-  if (token.length == 0) {
-    return "No authorization header.";
-  }
-
-  // NOTE: We don't care about the decoded token,
-  //       we just want to make sure that it is valid.
-  try {
-    jwt.verify(token, process.env.JWT_SECRET);
-  } catch (err) {
-    return "Invalid token.";
-  }
-
-  return "";
-}
-
-app.get("/GetPepper", function (req, res) {
-  const secretKey = process.env.PASSWORD_PEPPER;
-  if (secretKey == undefined) {
-    res.status(500).send("Server is missing JWT secret key.");
-    return;
-  }
-  res.status(200).send(secretKey);
-});
-
-app.post("/GetAuthToken", function (req, res) {
-  var ip = req.headers.host ?? req.ip;
-
-  // Parse request string
-  if (!req.body.hasOwnProperty("pwdHash")) {
-    recordIPFailedAttempt(ip, req.get("User-Agent"));
-    res
-      .status(400)
-      .send(
-        'Password Hash must be specified under "pwdHash", please see documentation.'
-      );
-    return;
-  }
-
-  // Check that the server has a password on file
-  if (!fs.existsSync("./.pwd_hash")) {
-    // Leave a trace that someone tried to auth
-    // even though there is no password hash.
-    logger.error(
-      "No password hash found, one must be created. " +
-        "Please run create_password.py"
-    );
-
-    res.status(500).send("Server has no password configured.");
-    return;
-  }
-
-  // Get the password hash
-  const pwdHash = req.body.pwdHash;
-
-  // Load the password hash
-  fs.readFile("./.pwd_hash", function (err, pwdHashOnFile) {
-    if (err) {
-      logger.error(err);
-      res.status(500).send("Server failed to read password hash.");
-      return;
-    }
-
-    // Check the password hash
-    if (pwdHash == pwdHashOnFile) {
-      // Create a new token
-      const token = jwt.sign({ authenticated: true }, process.env.JWT_SECRET, {
-        expiresIn: "1y",
-      });
-
-      // Caller was successful, record the IP
-      recordIPSuccessfulAttempt(ip);
-
-      // Ensure that the jwt path is set up
-      createMediaPath(token);
-
-      // Send the token
-      res.status(200).send(token);
-    } else {
-      recordIPFailedAttempt(ip, req.get("User-Agent"));
-      res.status(401).send("Invalid password hash.");
-    }
-  });
-});
-
-/***************************************
- * Manga Data Interface
- **************************************/
-
-app.get("/GetMangaCollectionIndex", function (req, res) {
-  var ip = req.headers.host ?? req.ip;
-
-  // Check the jwt in the authorization header
-  const err = isReqJWTValid(req);
-  if (err.length) {
-    res.status(401).send(err);
-    return;
-  }
-  recordIPSuccessfulAttempt(ip);
-
-  // Ensure that the jwt path is set up
-  createMediaPath(getJWTFromReq(req));
-
-  // Return the index
-  var { index, isGood } = _mediaCollectionIndex["manga"];
-  if (isGood) res.status(200).send(Object.values(index));
-  else res.status(500).send("Server index is stale.");
-});
-
-app.get("/GetMangaMetaDataByTitle", function (req, res) {
-  var ip = req.headers.host ?? req.ip;
-
-  // Extract the title from the request
-  if (!req.query.hasOwnProperty("titles")) {
-    logger.info(`${ip} made a bad request for manga metadata.`);
-    res
-      .status(400)
-      .send(
-        'Title must be specified under "titles", please see documentation.'
-      );
-    return;
-  }
-  const titles_str = req.query.titles;
-
-  // Check the jwt in the authorization header
-  const err = isReqJWTValid(req);
-  if (err.length) {
-    res.status(401).send(err);
-    return;
-  }
-
-  // Record the IP
-  recordIPSuccessfulAttempt(ip);
-
-  // Ensure that the jwt path is set up
-  createMediaPath(getJWTFromReq(req));
-
-  // Filter function for fields we don't want to send to the client
-  function filter_db_privates(doc) {
-    delete doc._id;
-  }
-
-  // NOTE: Response to client is all is handled in here
-  queryDbByTitle(titles_str, "manga", filter_db_privates, res);
-});
-
-app.get("/GetMangaChaptersByTitle", function (req, res) {
-  var ip = req.headers.host ?? req.ip;
-
-  // Parse request
-  if (!req.query.hasOwnProperty("titles")) {
-    logger.info(`${ip} made a bad request for chapter index.`);
-    res
-      .status(400)
-      .send(
-        'Title must be specified under "titles", please see documentation.'
-      );
-    return;
-  }
-  const titles_str = req.query.titles;
-
-  // Check the jwt in the authorization header
-  const err = isReqJWTValid(req);
-  if (err.length) {
-    res.status(401).send(err);
-    return;
-  }
-
-  // Record the IP
-  recordIPSuccessfulAttempt(ip);
-
-  // Ensure that the jwt path is set up
-  createMediaPath(getJWTFromReq(req));
-
-  // Build a list containing the chapter index for each requested title
-  // Data is in the FS index
-  // Include with each index a status flag
-  let chapterIndex = [];
-  for (let title of titles_str.split(",")) {
-    if (_mediaFSIndex["manga"].hasOwnProperty(title)) {
-      var { chapters, isGood } = _mediaFSIndex["manga"][title];
-      chapterIndex.push({
-        data: chapters,
-        status: isGood ? 200 : 500,
-        message: isGood ? "" : `Server data for title "${title}" is bad.`,
-      });
-    } else {
-      chapterIndex.push({
-        data: {},
-        status: 404,
-        message: `Server does not recognize title "${title}".`,
-      });
-    }
-  }
-
-  res.status(207).send(chapterIndex);
-});
-
-/***************************************
- * Video Data Interface
- **************************************/
-
-app.get("/GetVideoCollectionIndex", function (req, res) {
-  var ip = req.headers.host ?? req.ip;
-
-  // Check the jwt in the authorization header
-  const err = isReqJWTValid(req);
-  if (err.length) {
-    res.status(401).send(err);
-    return;
-  }
-
-  // Record the IP
-  recordIPSuccessfulAttempt(ip);
-
-  // Ensure that the jwt path is set up
-  createMediaPath(getJWTFromReq(req));
-
-  var { index, isGood } = _mediaCollectionIndex["video"];
-  if (isGood) res.status(200).send(Object.values(index));
-  else res.status(500).send("Server index is stale.");
-});
-
-app.get("/GetVideoMetaDataByTitle", function (req, res) {
-  var ip = req.headers.host ?? req.ip;
-
-  // Parse request
-  if (!req.query.hasOwnProperty("titles")) {
-    res
-      .status(400)
-      .send(
-        'Title must be specified under "titles", please see documentation.'
-      );
-    return;
-  }
-  const titles_str = req.query.titles;
-
-  // Check the jwt in the authorization header
-  const err = isReqJWTValid(req);
-  if (err.length) {
-    res.status(401).send(err);
-    return;
-  }
-
-  // Record the IP
-  recordIPSuccessfulAttempt(ip);
-
-  // Ensure that the jwt path is set up
-  createMediaPath(getJWTFromReq(req));
-
-  // Filter function for fields we don't want to send to the client
-  function filter_db_privates(doc) {
-    delete doc._id;
-  }
-
-  // NOTE: Response to client is all is handled in here
-  queryDbByTitle(titles_str, "video", filter_db_privates, res);
-});
-
-app.get("/GetVideoEpisodesByTitle", function (req, res) {
-  var ip = req.headers.host ?? req.ip;
-
-  // Parse request
-  if (!req.query.hasOwnProperty("titles")) {
-    res
-      .status(400)
-      .send(
-        'Title must be specified under "titles", please see documentation.'
-      );
-    return;
-  }
-  const titles_str = req.query.titles;
-
-  // Check the jwt in the authorization header
-  const err = isReqJWTValid(req);
-  if (err.length) {
-    res.status(401).send(err);
-    return;
-  }
-
-  // Record the IP
-  recordIPSuccessfulAttempt(ip);
-
-  // Ensure that the jwt path is set up
-  createMediaPath(getJWTFromReq(req));
-
-  // Build a list containing the chapter index for each requested title
-  // Data is in the FS index
-  // Include with each index a status flag
-  let episodeIndex = [];
-  for (let title of titles_str.split(",")) {
-    if (_mediaFSIndex["video"].hasOwnProperty(title)) {
-      var { episodes, isGood } = _mediaFSIndex["video"][title];
-      episodeIndex.push({
-        data: episodes,
-        status: isGood ? 200 : 500,
-        message: isGood ? "" : `Server data for title "${title}" is bad.`,
-      });
-    } else {
-      episodeIndex.push({
-        data: [],
-        status: 404,
-        message: `Server does not recognize title "${title}".`,
-      });
-    }
-  }
-
-  res.status(207).send(episodeIndex);
-});
-
-app.get("/GetSubtitleSelectionsForEpisode", function (req, res) {
-  var ip = req.headers.host ?? req.ip;
-
-  // Parse request
-  if (!req.query.hasOwnProperty("title")) {
-    res
-      .status(400)
-      .send('Title must be specified under "title", please see documentation.');
-    return;
-  }
-  if (!req.query.hasOwnProperty("episode")) {
-    res
-      .status(400)
-      .send(
-        'Episode must be specified under "episode", please see documentation.'
-      );
-    return;
-  }
-  const title_str = req.query.title;
-  const episode_str = req.query.episode;
-
-  // Check the jwt in the authorization header
-  const err = isReqJWTValid(req);
-  if (err.length) {
-    res.status(401).send(err);
-    return;
-  }
-
-  // Record the IP
-  recordIPSuccessfulAttempt(ip);
-
-  // Ensure that the jwt path is set up
-  createMediaPath(getJWTFromReq(req));
-
-  // Get the subtitles options for the provided episode of the given title.
-  if (_mediaFSIndex["subtitles"].hasOwnProperty(title_str)) {
-    var { subtitleMap, isGood } = _mediaFSIndex["subtitles"][title_str];
-
-    // Case where our subtitle data is not good
-    /// TODO: do something about this when we encounter this scenario
-    if (!isGood) {
-      res
-        .status(500)
-        .send(`Server subtitles data for title "${title_str}" is bad.`);
-      return;
-    }
-
-    // Case where we just don't have any subtitles for this title
-    if (!subtitleMap.hasOwnProperty(episode_str)) {
-      res
-        .status(204)
-        .send(
-          `Server has no subtitles for episode "${episode_str}" of title "${title_str}".`
-        );
-      return;
-    }
-
-    let tracks = [];
-    for (let subtitleFile of subtitleMap[episode_str]) {
-      let { trackKey } = splitSubtitleFile(subtitleFile);
-      tracks.push(trackKey);
-    }
-
-    res.status(200).send(tracks);
-    return;
-  } else {
-    res.status(204).send(`Server has no subtitles for "${title_str}".`);
-    return;
-  }
-});
-
-app.get("/GetSubtitlesChewieFmt", function (req, res) {
-  var ip = req.headers.host ?? req.ip;
-
-  // Parse request
-  if (!req.query.hasOwnProperty("title")) {
-    res
-      .status(400)
-      .send('Title must be specified under "title", please see documentation.');
-    return;
-  }
-  if (!req.query.hasOwnProperty("episode")) {
-    res
-      .status(400)
-      .send(
-        'Episode must be specified under "episode", please see documentation.'
-      );
-    return;
-  }
-  if (!req.query.hasOwnProperty("track")) {
-    res
-      .status(400)
-      .send(
-        'Subtitle track must be specified under "track", please see documentation.'
-      );
-    return;
-  }
-  const title_str = req.query.title;
-  const episode_str = req.query.episode;
-  const track_str = req.query.track;
-
-  // Check the jwt in the authorization header
-  const err = isReqJWTValid(req);
-  if (err.length) {
-    res.status(401).send(err);
-    return;
-  }
-
-  // Record the IP
-  recordIPSuccessfulAttempt(ip);
-
-  // Ensure that the jwt path is set up
-  createMediaPath(getJWTFromReq(req));
-
-  // Get the subtitles options for the provided episode of the given title.
-  if (_mediaFSIndex["subtitles"].hasOwnProperty(title_str)) {
-    var { subtitleMap, isGood } = _mediaFSIndex["subtitles"][title_str];
-
-    // Error handling
-    if (!isGood) {
-      res
-        .status(500)
-        .send(`Server subtitles data for title "${title_str}" is bad.`);
-      return;
-    }
-
-    // This is an client error, as they should have a list of valid subtitles.
-    if (!subtitleMap.hasOwnProperty(episode_str)) {
-      res
-        .status(404)
-        .send(
-          `Server has no subtitles for episode "${episode_str}" of title "${title_str}".`
-        );
-      return;
-    }
-
-    // Find the requested filename
-    let subtitleFile = subtitleMap[episode_str].find(function (fileName) {
-      let { trackKey } = splitSubtitleFile(fileName);
-      return trackKey == track_str;
-    });
-    if (!subtitleFile) {
-      res
-        .status(404)
-        .send(
-          `Server has no track ${track_str} for episode "${episode_str}" of title "${title_str}".`
-        );
-      return;
-    }
-
-    // Parse the file with our helper.
-    let pathSubtitles = config.folders.FolderSubtitles;
-    let pathSubtitle = `${pathSubtitles}/${title_str}/${subtitleFile}`;
-    let { subtitles, status } = parseSubtitlesFileToChewie(pathSubtitle);
-    if (!status) {
-      res
-        .status(500)
-        .send(
-          `Server has track ${track_str} for episode "${episode_str}" of title "${title_str}", but failed to read it.`
-        );
-      return;
-    }
-
-    // If all has gone well, then we can return the data.
-    res.status(200).send(subtitles);
-    return;
-  } else {
-    // This is an client error, as they should have a list of valid tracks.
-    res.status(404).send(`Server has no subtitles for "${title_str}".`);
-    return;
-  }
-});

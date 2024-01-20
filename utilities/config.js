@@ -2,6 +2,23 @@ import fs from "fs";
 import ini from "ini";
 
 /**
+ *  Config data from the config.ini file.
+ */
+
+// HACK
+// We create a cyclical dependency if we import shutdown here.
+// so we just copy the relevant exit code here.
+const CONFIG_ERROR = -2;
+
+var config;
+try {
+  config = ini.parse(fs.readFileSync("./config.ini", "utf-8"));
+} catch (err) {
+  console.error(err);
+  process.exit(CONFIG_ERROR);
+}
+
+/**
  *  @brief Helper method for making sure that the required configuration
  *         fields are present in the config file.
  *  @returns True if all required fields are present, false otherwise.
@@ -18,12 +35,13 @@ function validateConfig() {
     missing_header = true;
   } else {
     let required_params = [
-      "PollingRateMetadataUpdatesSeconds",
+      "PollingRateMediaSeconds",
       "DbAddress",
       "ServerPort",
       "LimitFailedLoginAttempts",
       "LimitUnauthorizedRequestsWindowMs",
       "LimitUnauthorizedRequestsCount",
+      "PeriodJWTExpiration",
     ];
     for (let param of required_params) {
       if (config.server[param] == undefined) {
@@ -112,15 +130,10 @@ function validateConfig() {
   return !missing_header && !missing_params;
 }
 
-/**
- *  Config data from the config.ini file.
- */
-const config = ini.parse(fs.readFileSync("./config.ini", "utf-8"));
-
 // Before we do anything else, validate the config file.
 if (!validateConfig()) {
   console.error("Cannot run without a valid config.");
-  process.exit(1);
+  process.exit(CONFIG_ERROR);
 }
 
 export default config;
