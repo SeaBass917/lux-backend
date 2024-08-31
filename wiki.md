@@ -10,6 +10,7 @@ Prod Environment
 s docker run \
     -p 27017:27017 \
     --name media-nosql-db \
+    --restart=always \
     -v ~/mongo/media-db:/var/lib/mongodb \
     -v ~/mongo/mongod.conf:/etc/mongod.conf \
     -v /etc/timezone:/etc/timezone:ro \

@@ -31,19 +31,11 @@ function getJWTFromReq(req) {
 }
 
 /**
- * Check the request for a valid JWT in the header.
- * @param {HttpRequest} req
+ * Check that the JWT is valid.
+ * @param {String} token
  * @returns Error string if there was a problem, otherwise empty string.
  */
-function isReqJWTValid(req) {
-  // Check the jwt in the authorization header
-  // If it is valid, then allow the request to continue
-  // If it is not valid, then return a 401
-  const token = getJWTFromReq(req);
-  if (token.length == 0) {
-    return "No authorization header.";
-  }
-
+function isJWTValid(token) {
   // NOTE: We don't care about the decoded token,
   //       we just want to make sure that it is valid.
   try {
@@ -53,6 +45,23 @@ function isReqJWTValid(req) {
   }
 
   return "";
+}
+
+/**
+ * Check the request for a valid JWT in the header.
+ * @param {HttpRequest} req
+ * @returns Error string if there was a problem, otherwise empty string.
+ */
+function isReqValid(req) {
+  // Check the jwt in the authorization header
+  // If it is valid, then allow the request to continue
+  // If it is not valid, then return a 401
+  const token = getJWTFromReq(req);
+  if (token.length == 0) {
+    return "No authorization header.";
+  }
+
+  return isJWTValid(token);
 }
 
 /**
@@ -116,7 +125,8 @@ function removeMediaPathSync() {
 
 export {
   getJWTFromReq,
-  isReqJWTValid,
+  isJWTValid,
+  isReqValid,
   generateNewToken,
   createMediaPath,
   removeMediaPathSync,

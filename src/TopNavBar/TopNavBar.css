@@ -1,0 +1,97 @@
+.TopNavBar h1, h2, h3, h4, div, img {
+  background-color: inherit;
+}
+
+.TopNavBar {
+  height: 64px;
+  display: flex;
+  flex-direction: row;
+  background-color: rgb(36, 36, 36);
+}
+.TopNavBar {
+  background-color: #4C4B6A;
+}
+
+.NavSector{
+  width: 195px;
+  display: flex;
+  align-items: center;
+  margin-right: 20px;
+}
+
+#logo {
+  cursor: pointer;
+}
+
+#logoImg {
+  width: 50px;
+  height: 50px;
+  margin: 20px;
+}
+#logoText {
+  color: #C5A0FC;
+  user-select: none;
+}
+
+.TopNavBar h1, h2, h3, h4 {
+  color: rgba(249, 249, 255, 0.60);
+}
+.NavTab {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: flex-end;
+  border-bottom: 5px solid #C5A0FC;
+  cursor: pointer;
+  user-select: none;
+}
+.NavTab div {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 75%;
+  border-bottom: 5px solid #4C4B6A;
+  border-top-left-radius: 12px;
+  border-top-right-radius: 12px;
+}
+.NavSelected,
+.NavSelected div {
+  border-bottom: 5px solid #D8D7FF;
+}
+.NavSelected h3 {
+  color: #F9F9FF;
+}
+.NavTab:hover,
+.NavTab:hover div {
+  border-bottom: 5px solid #D8D7FF;
+}
+.NavTab:hover div {
+  background-color: #5A5884;
+}
+.NavTab:hover h3 {
+  color: #F9F9FF;
+}
+
+#quickActions {
+  margin-left: auto;
+  justify-content: space-evenly;
+}
+
+#navPaddingEnd {
+  margin-right: 0px;
+}
+
+.TopNavBar svg {
+  border-radius: 10px;
+  fill: #F9F9FF;
+  background-color: inherit;
+  stroke: #F9F9FF;
+  /* stroke-width: 10; */
+  padding: 15px;
+}
+
+.TopNavBar svg:hover {
+  background-color: #5A5884;
+}

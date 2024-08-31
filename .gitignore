@@ -3,10 +3,16 @@ node_modules/
 .vscode/
 **/__pycache__/
 
-# Only need the assets in the public interface
-# Everything else is dynamically generated.
+# We need the assets & web app in the public interface
+# But want to avoid the auto-generated folders created by our backend.
 public/*
 !public/assets
+!public/favicon.ico
+!public/index.html
+!public/logo192.png
+!public/logo512.png
+!public/manifest.json
+!public/robots.txt
 
 # Keys, secrets, etc.
 cert.pem
@@ -14,6 +20,10 @@ key.pem
 .pwd_hash
 .secrets.env
 .server.env
+.env
 
 # Logs
 logs/*
+
+# Build files
+build/

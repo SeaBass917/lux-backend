@@ -35,7 +35,11 @@ router.get("/pepper", function (req, res) {
  */
 router.post("/auth-token", function (req, res) {
   // Parse request string
-  if (!req.body.hasOwnProperty("pwdHash") || req.body.pwdHash == "") {
+  if (
+    !req.body ||
+    !req.body.hasOwnProperty("pwdHash") ||
+    req.body.pwdHash == ""
+  ) {
     res
       .status(400)
       .send(

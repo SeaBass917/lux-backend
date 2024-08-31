@@ -1,26 +1,16 @@
 import fs from "fs";
-import { dirname } from "path";
 import { get as stackTraceGet } from "stack-trace";
-import { fileURLToPath } from "url";
 import winston from "winston";
 import "winston-daily-rotate-file";
 
 import config from "./config.js";
-
-// Determine the current working directory of the main application
-// So that we can filter that out of the logging.
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-const mainApplicationDirectory = __dirname.substring(
-  0,
-  __dirname.lastIndexOf("/")
-);
+import projectDir from "./project_dir.js";
 
 /**
  * Utility for cleaning up the full path of a file.
  */
 function cleanupFullPath(fullPath) {
-  return fullPath.replace(`file://${mainApplicationDirectory}/`, "");
+  return fullPath.replace(`file://${projectDir}/`, "");
 }
 
 /**
@@ -104,6 +94,16 @@ function setupLoggingManager(
         maxSize: maxLogSize,
         maxFiles: periodPurgeLogs,
         level: "error",
+        format: winston.format.combine(
+          winston.format.colorize(),
+          winston.format.timestamp({
+            format: () => new Date().toLocaleString(),
+          }),
+          winston.format.printf((error) => {
+            const callSiteInfo = getCallSiteInfo();
+            return `${error.timestamp} ERROR ${callSiteInfo}: ${error.message}`;
+          })
+        ),
       }),
       new winston.transports.DailyRotateFile({
         dirname: folderPathOut,
@@ -114,18 +114,28 @@ function setupLoggingManager(
         maxSize: maxLogSize,
         maxFiles: periodPurgeLogs,
         level: "info",
-      }),
-      new winston.transports.Console({
         format: winston.format.combine(
           winston.format.colorize(),
-          winston.format.timestamp(),
+          winston.format.timestamp({
+            format: () => new Date().toLocaleString(),
+          }),
           winston.format.printf((info) => {
             const callSiteInfo = getCallSiteInfo();
-            return `${info.timestamp} ${info.level} ${callSiteInfo}: ${info.message}`;
+            return `${info.timestamp} INFO ${callSiteInfo}: ${info.message}`;
           })
         ),
-        level: "debug",
       }),
+      // new winston.transports.Console({
+      //   format: winston.format.combine(
+      //     winston.format.colorize(),
+      //     winston.format.timestamp(),
+      //     winston.format.printf((info) => {
+      //       const callSiteInfo = getCallSiteInfo();
+      //       return `${info.timestamp} ${info.level} ${callSiteInfo}: ${info.message}`;
+      //     })
+      //   ),
+      //   level: "info",
+      // }),
     ],
   });
 

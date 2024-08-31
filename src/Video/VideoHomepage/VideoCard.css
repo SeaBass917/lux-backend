@@ -1,0 +1,45 @@
+.VideoCard {
+  position: relative;
+}
+
+.VideoCard__title {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: transform 5s;
+  will-change: transform;
+}
+  
+.VideoCard__title:hover {
+    transform: translateX(-100%);
+}
+
+.VideoCard__description {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 90%;
+  max-width: 90%;
+  height: 61%;
+  background-color: rgba(0, 0, 0, 0.7); 
+  padding: 20px;
+  color: white;
+  display: flex;
+  align-items: flex-start;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  overflow: scroll;
+  white-space: wrap;
+
+  /* Hide scrollbar for IE, Edge and Firefox */
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
+.VideoCard__description::-webkit-scrollbar {
+  display: none;
+}
+
+.VideoCard:hover .VideoCard__description {
+  opacity: 1;
+}

@@ -35,9 +35,10 @@ function validateConfig() {
     missing_header = true;
   } else {
     let required_params = [
-      "PollingRateMediaSeconds",
+      "MediaUpdateIntervalMs",
+      "BlacklistUpdateIntervalMs",
+      "MaxRequestSize",
       "DbAddress",
-      "ServerPort",
       "LimitFailedLoginAttempts",
       "LimitUnauthorizedRequestsWindowMs",
       "LimitUnauthorizedRequestsCount",

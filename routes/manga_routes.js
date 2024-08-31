@@ -115,7 +115,7 @@ function updateFSIndex() {
           fs.readdir(`${titleDir}/${chapter}`, (err, pages) => {
             if (err) {
               logger.error(err);
-              titleData = _fsIndex["index"][title] ?? {
+              var titleData = _fsIndex["index"][title] ?? {
                 chapters: {},
                 isGood: false,
               };
@@ -124,7 +124,7 @@ function updateFSIndex() {
               return;
             }
 
-            titleData = _fsIndex["index"][title] ?? {
+            var titleData = _fsIndex["index"][title] ?? {
               chapters: {},
               isGood: true,
             };
@@ -136,7 +136,7 @@ function updateFSIndex() {
     }
   });
 
-  setInterval(updateFSIndex, config.server.PollingRateMediaSeconds * 1000);
+  setInterval(updateFSIndex, config.server.MediaUpdateIntervalMs);
 }
 
 /**
@@ -176,7 +176,11 @@ router.get("/collection-index", function (req, res) {
  */
 router.get("/metadata", function (req, res) {
   // Extract the title from the request
-  if (!req.query.hasOwnProperty("titles") || req.query.titles == "") {
+  if (
+    !req.query ||
+    !req.query.hasOwnProperty("titles") ||
+    req.query.titles == ""
+  ) {
     res
       .status(400)
       .send(
@@ -250,7 +254,11 @@ router.get("/metadata", function (req, res) {
  */
 router.get("/chapters", function (req, res) {
   // Parse request
-  if (!req.query.hasOwnProperty("titles") || req.query.titles == "") {
+  if (
+    !req.query ||
+    !req.query.hasOwnProperty("titles") ||
+    req.query.titles == ""
+  ) {
     res
       .status(400)
       .send(
@@ -286,6 +294,6 @@ router.get("/chapters", function (req, res) {
 // Initialize the FS index
 // then start a timer to update it periodically.
 initFSIndex();
-setInterval(updateFSIndex, config.server.PollingRateMediaSeconds * 1000);
+setInterval(updateFSIndex, config.server.MediaUpdateIntervalMs);
 
 export default router;

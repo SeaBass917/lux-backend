@@ -180,7 +180,7 @@ function updateFSIndex() {
     }
   });
 
-  setInterval(updateFSIndex, config.server.PollingRateMediaSeconds * 1000);
+  setInterval(updateFSIndex, config.server.MediaUpdateIntervalMs);
 }
 
 /**
@@ -305,7 +305,11 @@ router.get("/collection-index", function (req, res) {
  */
 router.get("/metadata", function (req, res) {
   // Extract the title from the request
-  if (!req.query.hasOwnProperty("titles") || req.query.titles == "") {
+  if (
+    !req.query ||
+    !req.query.hasOwnProperty("titles") ||
+    req.query.titles == ""
+  ) {
     res
       .status(400)
       .send(
@@ -376,7 +380,11 @@ router.get("/metadata", function (req, res) {
  */
 router.get("/episodes", function (req, res) {
   // Parse request
-  if (!req.query.hasOwnProperty("titles") || req.query.titles == "") {
+  if (
+    !req.query ||
+    !req.query.hasOwnProperty("titles") ||
+    req.query.titles == ""
+  ) {
     res
       .status(400)
       .send(
@@ -425,13 +433,13 @@ router.get("/episodes", function (req, res) {
  */
 router.get("/subtitle-selections", function (req, res) {
   // Parse request
-  if (!req.query.hasOwnProperty("title")) {
+  if (!req.query || !req.query.hasOwnProperty("title")) {
     res
       .status(400)
       .send('Title must be specified under "title", please see documentation.');
     return;
   }
-  if (!req.query.hasOwnProperty("episode")) {
+  if (!req.query || !req.query.hasOwnProperty("episode")) {
     res
       .status(400)
       .send(
@@ -495,13 +503,13 @@ router.get("/subtitle-selections", function (req, res) {
  */
 router.get("/subtitles-chewie", function (req, res) {
   // Parse request
-  if (!req.query.hasOwnProperty("title")) {
+  if (!req.query || !req.query.hasOwnProperty("title")) {
     res
       .status(400)
       .send('Title must be specified under "title", please see documentation.');
     return;
   }
-  if (!req.query.hasOwnProperty("episode")) {
+  if (!req.query || !req.query.hasOwnProperty("episode")) {
     res
       .status(400)
       .send(
@@ -509,7 +517,7 @@ router.get("/subtitles-chewie", function (req, res) {
       );
     return;
   }
-  if (!req.query.hasOwnProperty("track")) {
+  if (!req.query || !req.query.hasOwnProperty("track")) {
     res
       .status(400)
       .send(
@@ -580,6 +588,6 @@ router.get("/subtitles-chewie", function (req, res) {
 // Initialize the FS index
 // then start a timer to update it periodically.
 initFSIndex();
-setInterval(updateFSIndex, config.server.PollingRateMediaSeconds * 1000);
+setInterval(updateFSIndex, config.server.MediaUpdateIntervalMs);
 
 export default router;
