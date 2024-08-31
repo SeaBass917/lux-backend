@@ -142,7 +142,7 @@ function updateBlacklist() {
  *  CORS configuration (for react).
  */
 const crossOriginRequests = cors({
-  origin: `http://${_ipv4}:3000`,
+  origin: `http://${_ipv4}:3001`,
   credentials: true,
   optionsSuccessStatus: 200,
 });
