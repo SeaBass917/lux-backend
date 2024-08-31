@@ -1,0 +1,17 @@
+# Don't bother copying modules over, they are pulled live
+node_modules
+frontend/node_modules
+
+# Logs, builds, etc.. from dev work. Ignore these
+logs/*
+frontend/build/*
+public/*
+
+# IDE, Framework, OS, etc.
+.vscode
+.git*
+
+# Docker files
+docker-compose*
+Dockerfile
+.dockerignore

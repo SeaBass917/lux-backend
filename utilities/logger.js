@@ -125,17 +125,17 @@ function setupLoggingManager(
           })
         ),
       }),
-      // new winston.transports.Console({
-      //   format: winston.format.combine(
-      //     winston.format.colorize(),
-      //     winston.format.timestamp(),
-      //     winston.format.printf((info) => {
-      //       const callSiteInfo = getCallSiteInfo();
-      //       return `${info.timestamp} ${info.level} ${callSiteInfo}: ${info.message}`;
-      //     })
-      //   ),
-      //   level: "info",
-      // }),
+      new winston.transports.Console({
+        format: winston.format.combine(
+          winston.format.colorize(),
+          winston.format.timestamp(),
+          winston.format.printf((info) => {
+            const callSiteInfo = getCallSiteInfo();
+            return `${info.timestamp} ${info.level} ${callSiteInfo}: ${info.message}`;
+          })
+        ),
+        level: "info",
+      }),
     ],
   });
 

@@ -1,22 +1,22 @@
 # Use the official Node.js image as the base image
 FROM node:20
 
-# Set the working directory
+# Copy the application code
 WORKDIR /usr/src/app
+COPY . .
 
-# Copy package.json and package-lock.json
-COPY package*.json ./
-
-# Install dependencies
+# Set up the initial Server dependencies
 RUN npm install
 RUN npm install -g pm2 
 RUN npm install -g serve
 
-# Copy the rest of the application code
-COPY . .
-
-# Build the application
+# Setup the front-end dependencies, build the front-end
+WORKDIR /usr/src/app/frontend
+RUN npm install
 RUN npm run build
 
+# Move back after done building
+WORKDIR /usr/src/app
+
 # Start the application using PM2
-CMD ["pm2-runtime", "ecosystem.config.js"]
+CMD ["pm2-runtime", "ecosystem.config.cjs"]

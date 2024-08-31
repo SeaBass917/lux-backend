@@ -6,8 +6,10 @@ services:
       context: .
       dockerfile: Dockerfile
     ports:
-      - "3000:3000"
+      - "3001:3001"
       - "8081:8081"
     volumes:
       - /home/seabass/seastorage-V/logs/media-server-logs:/usr/src/app/logs
-    command: ["pm2-runtime", "ecosystem.config.js"]
+      - /home/seabass/seastorage-V:/home/seabass/seastorage-V
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
