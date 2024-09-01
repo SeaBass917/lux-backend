@@ -45,8 +45,6 @@ import configparser
 # import ass
 # import pysrt
 
-from libs.web_scraping import check_for_config_issues
-
 
 def clean_ass_text(text: str) -> str:
     return re.sub("{[^}]+}", "", text.replace("\\N", "\n"))
@@ -188,17 +186,8 @@ def update_subtitle_db(path_videos: str, connection_str: str, overwrite=False):
 
 
 if __name__ == "__main__":
-
-    # Load in the config data
-    config = configparser.ConfigParser()
-    config.read("config.ini")
-
-    is_valid_config = check_for_config_issues(config, required_parameters=[
-        ("server", "DbAddress")
-    ])
-
-    if not is_valid_config:
-        print("Exiting...")
+    if "DB_ADDRESS" not in os.environ:
+        print("DB_ADDRESS was not set; required for this script.")
         exit(1)
 
-    update_subtitle_db("./videos", config["server"]["DbAddress"])
+    update_subtitle_db("./videos", os.getenv('DB_ADDRESS'))

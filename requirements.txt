@@ -1,0 +1,8 @@
+bcrypt==3.2.0
+beautifulsoup4==4.12.2
+configparser==6.0.0
+googlesearch-python==1.2.3
+pymkv==1.0.8
+pymongo==4.5.0
+python-dotenv==1.0.0
+urllib3==1.26.5

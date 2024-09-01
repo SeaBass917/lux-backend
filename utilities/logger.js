@@ -1,10 +1,22 @@
 import fs from "fs";
 import { get as stackTraceGet } from "stack-trace";
 import winston from "winston";
+import moment from "moment-timezone";
 import "winston-daily-rotate-file";
 
 import config from "./config.js";
 import projectDir from "./project_dir.js";
+
+/**
+ * System timezone.
+ */
+let systemTimezone;
+try {
+  systemTimezone = fs.readFileSync("/etc/timezone", "utf8").trim();
+} catch (err) {
+  console.error("Error reading /etc/timezone, defaulting to UTC", err);
+  systemTimezone = "UTC";
+}
 
 /**
  * Utility for cleaning up the full path of a file.
@@ -76,14 +88,6 @@ function setupLoggingManager(
 
   // Configure the logger to write to the provided files using timestamped JSON.
   const logger = winston.createLogger({
-    format: winston.format.combine(
-      winston.format.timestamp(),
-      winston.format.json(),
-      winston.format.printf((info) => {
-        const callSiteInfo = getCallSiteInfo();
-        return `${info.timestamp} ${info.level} ${callSiteInfo}: ${info.message}`;
-      })
-    ),
     transports: [
       new winston.transports.DailyRotateFile({
         dirname: folderPathOut,
@@ -97,11 +101,12 @@ function setupLoggingManager(
         format: winston.format.combine(
           winston.format.colorize(),
           winston.format.timestamp({
-            format: () => new Date().toLocaleString(),
+            format: () =>
+              moment().tz(systemTimezone).format("YYYY-MM-DD HH:mm:ss"),
           }),
           winston.format.printf((error) => {
             const callSiteInfo = getCallSiteInfo();
-            return `${error.timestamp} ERROR ${callSiteInfo}: ${error.message}`;
+            return `${error.timestamp} [${error.level}] ${callSiteInfo}: ${error.message}`;
           })
         ),
       }),
@@ -117,25 +122,29 @@ function setupLoggingManager(
         format: winston.format.combine(
           winston.format.colorize(),
           winston.format.timestamp({
-            format: () => new Date().toLocaleString(),
+            format: () =>
+              moment().tz(systemTimezone).format("YYYY-MM-DD HH:mm:ss"),
           }),
           winston.format.printf((info) => {
             const callSiteInfo = getCallSiteInfo();
-            return `${info.timestamp} INFO ${callSiteInfo}: ${info.message}`;
+            return `${info.timestamp} [${info.level}] ${callSiteInfo}: ${info.message}`;
           })
         ),
       }),
-      new winston.transports.Console({
-        format: winston.format.combine(
-          winston.format.colorize(),
-          winston.format.timestamp(),
-          winston.format.printf((info) => {
-            const callSiteInfo = getCallSiteInfo();
-            return `${info.timestamp} ${info.level} ${callSiteInfo}: ${info.message}`;
-          })
-        ),
-        level: "info",
-      }),
+      // new winston.transports.Console({
+      //   format: winston.format.combine(
+      //     winston.format.colorize(),
+      //     winston.format.timestamp({
+      //       format: () =>
+      //         moment().tz(systemTimezone).format("YYYY-MM-DD HH:mm:ss"),
+      //     }),
+      //     winston.format.printf((info) => {
+      //       const callSiteInfo = getCallSiteInfo();
+      //       return `${info.timestamp} ${info.level} ${callSiteInfo}: ${info.message}`;
+      //     })
+      //   ),
+      //   level: "info",
+      // }),
     ],
   });
 

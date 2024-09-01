@@ -25,6 +25,7 @@ dotenv.config({
 var _ipHistory = {};
 var _blacklist = new Set();
 var _ipv4 = process.env.REACT_APP_SERVER_IP;
+var _port_app = process.env.REACT_APP_PORT;
 
 /**
  * @brief  Helper function for recording failed login attempts.
@@ -142,7 +143,7 @@ function updateBlacklist() {
  *  CORS configuration (for react).
  */
 const crossOriginRequests = cors({
-  origin: `http://${_ipv4}:3001`,
+  origin: `http://${_ipv4}:${_port_app}`,
   credentials: true,
   optionsSuccessStatus: 200,
 });

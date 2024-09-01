@@ -1,12 +1,15 @@
 import * as mongodb from "mongodb";
-
-import config from "./config.js";
+import dotenv from "dotenv";
 import logger from "./logger.js";
 import { ExitCodes, shutdown } from "./shutdown.js";
 
+dotenv.config({
+  path: ".env",
+});
+
 var dbClient = null;
 try {
-  dbClient = new mongodb.MongoClient(config.server.DbAddress, {
+  dbClient = new mongodb.MongoClient(process.env.DB_ADDRESS, {
     useNewUrlParser: true,
     useUnifiedTopology: true,
   });

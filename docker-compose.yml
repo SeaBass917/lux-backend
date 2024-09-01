@@ -8,8 +8,23 @@ services:
     ports:
       - "3001:3001"
       - "8081:8081"
+    depends_on:
+      - lux-media-db
     volumes:
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
       - /home/seabass/seastorage-V/logs/media-server-logs:/usr/src/app/logs
       - /home/seabass/seastorage-V:/home/seabass/seastorage-V
+    environment:
+      - DB_ADDRESS=mongodb://lux-media-db:27017
+  lux-media-db:
+    image: mongo:7.0
+    ports:
+      - "27017:27017"
+    volumes:
+      - /home/seabass/lux/db/media-db:/data/db
+      - /home/seabass/lux/db/mongod.conf:/etc/mongod.conf
+      - /home/seabass/seastorage-V/db-backups/media-db:/backups:ro
       - /etc/localtime:/etc/localtime:ro
       - /etc/timezone:/etc/timezone:ro
+    restart: always

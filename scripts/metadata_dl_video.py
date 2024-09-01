@@ -94,7 +94,7 @@ def download_missing_video_data():
     required_metadata = config["webscraping"]["RequiredMetadataVideo"].split(
         ",")
 
-    db_connection_str = config["server"]["DbAddress"]
+    db_connection_str = os.getenv('DB_ADDRESS')
 
     # Loop through each Video Folder in the Maga Directory
     # Check each metadata file for the required data
@@ -206,4 +206,8 @@ def download_missing_video_data():
 
 
 if __name__ == "__main__":
+    if "DB_ADDRESS" not in os.environ:
+        print("DB_ADDRESS was not set; required for this script.")
+        exit(1)
+
     download_missing_video_data()

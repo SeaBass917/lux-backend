@@ -32,7 +32,7 @@ function updateMetaInfo() {
       if (data.stderr.length) logger.error(data.stderr);
     })
     .catch(function (err) {
-      logger.error(err);
+      logger.error(err.toString());
     });
 
   logger.info("Updating Video Metadata...");
@@ -42,7 +42,7 @@ function updateMetaInfo() {
       if (data.stderr.length) logger.error(data.stderr);
     })
     .catch(function (err) {
-      logger.error(err);
+      logger.error(err.toString());
     });
 }
 

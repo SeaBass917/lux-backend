@@ -9,6 +9,10 @@ COPY . .
 RUN npm install
 RUN npm install -g pm2 
 RUN npm install -g serve
+RUN apt-get update && \
+    apt-get install -y python3-pip && \
+    rm -rf /var/lib/apt/lists/*
+RUN pip install --no-cache-dir --break-system-packages -r requirements.txt
 
 # Setup the front-end dependencies, build the front-end
 WORKDIR /usr/src/app/frontend

@@ -67,7 +67,8 @@ function initFSIndex() {
         }
         titleData["chapters"] = chapters;
       } catch (err) {
-        logger.error(err);
+        logger.warn(`Failed to read chapters for ${title} in ${titleDir}`);
+        logger.warn(err.toString());
         titleData["isGood"] = false;
       }
 

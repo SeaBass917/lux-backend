@@ -38,7 +38,6 @@ function validateConfig() {
       "MediaUpdateIntervalMs",
       "BlacklistUpdateIntervalMs",
       "MaxRequestSize",
-      "DbAddress",
       "LimitFailedLoginAttempts",
       "LimitUnauthorizedRequestsWindowMs",
       "LimitUnauthorizedRequestsCount",

@@ -85,7 +85,8 @@ function initFSIndex() {
       try {
         titleData["episodes"] = fs.readdirSync(titleDir);
       } catch (err) {
-        logger.error(err);
+        logger.warn(`Failed to read episodes for ${title} in ${titleDir}`);
+        logger.warn(err.toString());
         titleData["isGood"] = false;
       }
       try {
