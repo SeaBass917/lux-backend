@@ -1,0 +1,23 @@
+[
+  {
+    "model": "metadata.MangaTypes",
+    "pk": 1,
+    "fields": {
+      "name": "Manga"
+    }
+  },
+  {
+    "model": "metadata.MangaTypes",
+    "pk": 2,
+    "fields": {
+      "name": "Manhwa"
+    }
+  },
+  {
+    "model": "metadata.MangaTypes",
+    "pk": 3,
+    "fields": {
+      "name": "Web Comic"
+    }
+  }
+]

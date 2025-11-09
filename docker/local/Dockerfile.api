@@ -1,0 +1,56 @@
+# ====================================================================
+# Stage 1: builder (Installs all dependencies and compiles packages)
+# ====================================================================
+FROM python:3.12-slim as builder
+
+# Install runtime dependencies
+RUN apt-get update && apt-get install -y \
+    gcc \
+    build-essential \
+    python3-dev \
+    pkg-config \
+    --no-install-recommends && \
+    rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Install Python dependencies
+RUN python3 -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+COPY --chmod=444 ./server/requirements.frozen.txt /app/
+RUN pip install --no-cache-dir -r requirements.frozen.txt
+
+# ====================================================================
+# Stage 2: runtime (Minimal image for executing the application)
+# ====================================================================
+FROM python:3.12-slim AS runtime
+
+RUN apt-get update && apt-get install -y \
+    libgmp10 \
+    gunicorn \
+    libpq-dev \
+    gcc \
+    build-essential \
+    python3-dev \
+    pkg-config \
+    --no-install-recommends && \
+    rm -rf /var/lib/apt/lists/*
+
+RUN useradd -U -u 1000 appuser
+RUN mkdir /app && chown -R appuser:appuser /app
+
+COPY --from=builder --chown=appuser:appuser /opt/venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
+# Set up user and working directories
+USER appuser
+RUN mkdir -p /app/lux
+WORKDIR /app/lux
+
+# Set up the initial folder configuration
+COPY --chown=appuser:appuser ./server /app/lux/
+
+# Application port
+EXPOSE 8000
+
+CMD ["gunicorn", "lux.wsgi:application", "--bind", "0.0.0.0:8000"]

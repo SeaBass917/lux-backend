@@ -1,0 +1,4 @@
+[MASTER]
+load-plugins=pylint_django
+disable=django-not-configured,broad-exception-caught,too-few-public-methods,too-many-arguments,too-many-return-statements,unknown-option-value,too-many-lines,too-many-branches,too-many-statements,too-many-instance-attributes,too-many-locals,duplicate-code,fixme,arguments-differ,global-statement
+ignore-paths=.*/migrations

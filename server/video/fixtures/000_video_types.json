@@ -1,0 +1,16 @@
+[
+  {
+    "model": "metadata.VideoTypes",
+    "pk": 1,
+    "fields": {
+      "name": "TV"
+    }
+  },
+  {
+    "model": "metadata.VideoTypes",
+    "pk": 2,
+    "fields": {
+      "name": "Movie"
+    }
+  }
+]

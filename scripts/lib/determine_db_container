@@ -1,0 +1,21 @@
+#!/bin/bash
+# Open the yaml file,
+# search for the entry that has a build for a Dockerfile
+# Extract the name from the top
+# If we fail to find it, exit and explain to the caller
+# Usage:
+#   ./scripts/determine_db_container
+PATH=$PATH:"$(pwd)/scripts/lib"
+
+# Find the line "postgis" and all that came before it  (This is the entry who is the DB)
+# The get the lines that match /^  [A-Za-z0-9].+:/     (This is the name of all containers above it)
+# Filter down to just the one above it
+# Extract the name from that line and clean it up
+container_name=$(grep -B 99999 "postgres:latest" docker-compose.yml | grep -Eo "^  [A-Za-z0-9].+:" | tail -n 1 | sed 's/://g' | tr -d '[:space:]')
+
+if [ -z "$container_name" ]; then
+    echo "Could not determine the container name from the docker-compose.yml file."
+    exit 1
+fi
+
+echo $container_name

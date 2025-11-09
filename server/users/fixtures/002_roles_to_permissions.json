@@ -1,0 +1,18 @@
+[
+  {
+    "model": "users.PermissionToRole",
+    "pk": 1,
+    "fields": {
+      "role_ref": 1,
+      "permission_ref": 1
+    }
+  },
+  {
+    "model": "users.PermissionToRole",
+    "pk": 2,
+    "fields": {
+      "role_ref": 2,
+      "permission_ref": 1
+    }
+  }
+]

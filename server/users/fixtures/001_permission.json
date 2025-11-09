@@ -1,0 +1,11 @@
+[
+  {
+    "model": "users.permission",
+    "pk": 1,
+    "fields": {
+      "module_ref": 2,
+      "permission_name": "auth_test",
+      "action": "view"
+    }
+  }
+]
