@@ -14,6 +14,8 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     command: ["postgres", "-c", "fsync=off", "-c", "log_statement=all"]
+    networks:
+      - shared-local-net
 
   api:
     build:
@@ -25,10 +27,12 @@ services:
     env_file:
       - .env
     volumes:
-      - ./server:/app/lux/server
-      - ./media:/app/media
+      - ./server:/app/lux:rw
+      - ./media:/app/media:rw
     ports:
       - "${API_PORT}:${API_PORT}"
+    networks:
+      - shared-local-net
 
   redis:
     image: redis:alpine
@@ -36,6 +40,8 @@ services:
       - "${REDIS_PORT_OUT}:${REDIS_PORT_IN}"
     environment:
       - REDIS_PASSWORD=${REDIS_PASSWORD}
+    networks:
+      - shared-local-net
 
   celery-worker:
     env_file:
@@ -49,6 +55,8 @@ services:
     depends_on:
       - redis
       - api
+    networks:
+      - shared-local-net
 
   celery-beat:
     env_file:
@@ -62,6 +70,8 @@ services:
     depends_on:
       - redis
       - api
+    networks:
+      - shared-local-net
 
   server:
     container_name: nginx_proxy
@@ -74,7 +84,13 @@ services:
     depends_on:
       - db
       - api
+    networks:
+      - shared-local-net
 
 volumes:
   postgres_data:
     driver: local
+
+networks:
+  shared-local-net:
+    driver: bridge

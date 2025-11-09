@@ -1,22 +1,12 @@
 from rest_framework import status
-from rest_framework.authentication import SessionAuthentication
-from rest_framework.decorators import (
-    authentication_classes,
-    permission_classes,
-)
-from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 
 from lux.views.lux_base_api_view import LuxBaseAPIView
 
 
-@authentication_classes([])
-@permission_classes([AllowAny])
 class PingAPIView(LuxBaseAPIView):
     """Ping the server to check if it is running."""
 
-    @authentication_classes(SessionAuthentication)
-    @permission_classes([AllowAny])
     def get(self, request):
         """Return a response to indicate the server is running.
 

@@ -5,10 +5,9 @@ from users.models.user import User
 from lux.services import generate_token
 
 
-def create_bearer_token(user: User) -> BearerToken:
+def create_bearer_token() -> BearerToken:
     """
-    Creates a Bearer Token for the User.
-    And adds it to the User's Bearer Token.
+    Creates a Bearer Token for Users to bear.
 
     Raises:
         IntegrityError: If something unexpected happens.
@@ -18,4 +17,4 @@ def create_bearer_token(user: User) -> BearerToken:
     while BearerToken.objects.filter(token=token).exists():
         token = generate_token()
 
-    return BearerToken.objects.create(user=user, token=token)
+    return BearerToken.objects.create(token=token)

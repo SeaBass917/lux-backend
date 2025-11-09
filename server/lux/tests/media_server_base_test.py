@@ -1,13 +1,9 @@
 """This module contains the base test class for the APIs."""
-from rest_framework.test import APIClient, APIRequestFactory
-from django.test import TestCase
+from django.test import TestCase, Client
 from faker import Faker
 
 from users.models import (
     BearerToken,
-    Module,
-    Permission,
-    PermissionToRole,
     Role,
     User,
 )
@@ -18,6 +14,9 @@ faker = Faker()
 
 class LuxBaseTest(TestCase):
     """Base class for all tests against this API."""
+
+    fixtures = ['000_module.json', '001_permission.json',
+                '001_roles.json', '002_roles_to_permissions.json']
 
     def create_user(self, bt: BearerToken = None, role: Role = None) -> User:
         """Create a user object in the Users table.
@@ -36,8 +35,6 @@ class LuxBaseTest(TestCase):
             role = self.create_role()
 
         user = User.objects.create(bearer_token=bt, role=role)
-
-        user.save()
         return user
 
     def create_role(self, role_name: str = None):
@@ -53,34 +50,23 @@ class LuxBaseTest(TestCase):
         """
         if role_name is None:
             role_name = faker.pystr()
+
         role = Role.objects.create(role=role_name)
         return role
 
-    def set_permission(self, role: Role, module: str, permission: str, action: str):
-        """Set a specified permission for a given role.
-        Permissions are specified for a given module, permission, and action.
-
-        Args:
-            role (Role): The role to set the permission for.
-            module (str): The module name.
-            permission (str): The permission name.
-            action (str): The action name.
+    def set_up_user_with_role(self, role: str) -> User:
+        """Create a user that has a specific role.
+        Set up the client to carry out subsequent calls as that user.
 
         Returns:
-            PermissionToRole: The permission to role object created.
+            User: The user object created.
+
+        Raises:
+            Role.DoesNotExist: If the specified role does not exist.
         """
-        module_obj = Module.objects.get_or_create(module_name=module)[0]
-        permission_obj = Permission.objects.get_or_create(
-            permission_name=permission, action=action, module_ref=module_obj
-        )[0]
-        role_to_permission, _ = PermissionToRole.objects.get_or_create(
-            role_ref=role, permission_ref=permission_obj
-        )
-        return role_to_permission
+        role_obj = Role.objects.get(role=role)
+        user = self.create_user(role=role_obj)
+        self.client.defaults['HTTP_AUTHORIZATION'] = f'Bearer {user.bearer_token.token}'
 
     def setUp(self):
-        # Every test needs access to the request factory.
-        self.user = self.create_user()
-        self.role = self.create_role(self.app)
-        self.factory = APIRequestFactory()
-        self.client = APIClient()
+        self.client = Client()

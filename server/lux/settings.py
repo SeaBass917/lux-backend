@@ -36,6 +36,11 @@ if __env_allowed_host:
 
 # Application definition
 INSTALLED_APPS = [
+    # Even though we bypass all of Django's auth system, we still need these
+    # apps because DRF requires them. Even if we skip all of the stuff.
+    "django.contrib.auth",
+    "django.contrib.contenttypes",
+
     "rest_framework",
     "corsheaders",
     "lux",
@@ -110,7 +115,6 @@ WSGI_APPLICATION = "lux.wsgi.application"
 
 # Database
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases
-
 DATABASES = {
     "default": {
         "ENGINE":  "django.db.backends.postgresql",
@@ -122,23 +126,14 @@ DATABASES = {
     },
 }
 
-# Password validation is not a thing we do.
-# https://docs.djangoproject.com/en/5.0/ref/settings/#auth-password-validators
+# We handle the auth. There are no passwords.
 AUTH_PASSWORD_VALIDATORS = []
-
+AUTHENTICATION_BACKENDS = []
 
 # Internationalization
 # https://docs.djangoproject.com/en/5.0/topics/i18n/
-
 LANGUAGE_CODE = "en-us"
 USE_I18N = True
-
-# Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/5.0/howto/static-files/
-
-# STATIC_URL = "static/"
-# STATIC_ROOT = os.path.join(BASE_DIR, "static")
-# STATICFILES_DIRS = []
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field
@@ -147,8 +142,8 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": [
-        "rest_framework.permissions.IsAuthenticated"
-        # 'rest_framework.permissions.AllowAny', // for testing only
+        # We aren't using this. But we HAVE to use it to get DRF to work.
+        "rest_framework.permissions.AllowAny"
     ],
 }
 

@@ -9,29 +9,19 @@ class PingViewTest(LuxBaseTest):
     Tests for the ping view.
     """
 
-    def test_ping_view(self):
+    def test_ping_view_no_auth_required(self):
         """
         Test the ping view returns a 200 OK response.
         """
         response = self.client.get("/api/v1/healthy/")
-        self.assert_equal(response.status_code, status.HTTP_200_OK)
-        self.assert_equal(response.json(), {'info': 'Hello world'})
-
-    def test_ping_view_no_auth_required(self):
-        """
-        Test the ping view does not require authentication.
-        """
-        self.client.force_authenticate(user=None)
-        response = self.client.get("/api/v1/healthy/")
-        self.assert_equal(response.status_code, status.HTTP_200_OK)
-        self.assert_equal(response.json(), {'info': 'Hello world'})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.json(), {'info': 'Hello world'})
 
     def test_ping_view_with_auth(self):
         """
         Test the ping view returns a 200 OK response with authentication.
         """
-        user = self.create_user()
-        self.client.force_authenticate(user=user)
+        self.set_up_user_with_role('Basic')
         response = self.client.get("/api/v1/healthy/")
-        self.assert_equal(response.status_code, status.HTTP_200_OK)
-        self.assert_equal(response.json(), {'info': 'Hello world'})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.json(), {'info': 'Hello world'})

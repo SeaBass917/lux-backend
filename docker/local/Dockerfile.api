@@ -26,13 +26,7 @@ RUN pip install --no-cache-dir -r requirements.frozen.txt
 FROM python:3.12-slim AS runtime
 
 RUN apt-get update && apt-get install -y \
-    libgmp10 \
     gunicorn \
-    libpq-dev \
-    gcc \
-    build-essential \
-    python3-dev \
-    pkg-config \
     --no-install-recommends && \
     rm -rf /var/lib/apt/lists/*
 
