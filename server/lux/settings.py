@@ -12,10 +12,12 @@ https://docs.djangoproject.com/en/5.0/ref/settings/
 
 import os
 from pathlib import Path
-from datetime import timedelta
 import logging
 import json
-from celery.schedules import crontab, schedule
+
+from lux.utils.settings.timezone import get_system_timezone
+from lux.utils.settings.celery import get_celery_settings
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -41,6 +43,7 @@ INSTALLED_APPS = [
     "django.contrib.auth",
     "django.contrib.contenttypes",
 
+    # My Stuff
     "rest_framework",
     "corsheaders",
     "lux",
@@ -140,48 +143,11 @@ USE_I18N = True
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
+# We aren't using these settings. But we HAVE to use it to get DRF to work.
 REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": [
-        # We aren't using this. But we HAVE to use it to get DRF to work.
         "rest_framework.permissions.AllowAny"
     ],
-}
-
-
-SIMPLE_JWT = {
-    "ACCESS_TOKEN_LIFETIME": timedelta(days=30),
-    "REFRESH_TOKEN_LIFETIME": timedelta(days=30),
-    "ROTATE_REFRESH_TOKENS": False,
-    "BLACKLIST_AFTER_ROTATION": False,
-    "ALGORITHM": "HS256",
-    "SIGNING_KEY": SECRET_KEY,
-    "VERIFYING_KEY": "",
-    "AUDIENCE": None,
-    "ISSUER": None,
-    "JSON_ENCODER": None,
-    "JWK_URL": None,
-    "LEEWAY": 0,
-    "AUTH_HEADER_TYPES": ("Bearer",),
-    "AUTH_HEADER_NAME": "HTTP_AUTHORIZATION",
-    "USER_ID_FIELD": "id",
-    "USER_ID_CLAIM": "user_id",
-    "USER_AUTHENTICATION_RULE":
-        "rest_framework_simplejwt.authentication.default_user_authentication_rule",
-    "AUTH_TOKEN_CLASSES": ("rest_framework_simplejwt.tokens.AccessToken",),
-    "TOKEN_TYPE_CLAIM": "token_type",
-    "TOKEN_USER_CLASS": "rest_framework_simplejwt.models.TokenUser",
-    "JTI_CLAIM": "jti",
-    "SLIDING_TOKEN_REFRESH_EXP_CLAIM": "refresh_exp",
-    "SLIDING_TOKEN_LIFETIME": timedelta(days=30),
-    "SLIDING_TOKEN_REFRESH_LIFETIME": timedelta(days=30),
-    "TOKEN_OBTAIN_SERIALIZER": "rest_framework_simplejwt.serializers.TokenObtainPairSerializer",
-    "TOKEN_REFRESH_SERIALIZER": "rest_framework_simplejwt.serializers.TokenRefreshSerializer",
-    "TOKEN_VERIFY_SERIALIZER": "rest_framework_simplejwt.serializers.TokenVerifySerializer",
-    "TOKEN_BLACKLIST_SERIALIZER": "rest_framework_simplejwt.serializers.TokenBlacklistSerializer",
-    "SLIDING_TOKEN_OBTAIN_SERIALIZER":
-        "rest_framework_simplejwt.serializers.TokenObtainSlidingSerializer",
-    "SLIDING_TOKEN_REFRESH_SERIALIZER":
-        "rest_framework_simplejwt.serializers.TokenRefreshSlidingSerializer",
 }
 
 
@@ -224,56 +190,24 @@ LOGGING = {
             "level": "DEBUG",
             "propagate": True,
         },
+        # Silence debug messages.
+        'faker': {
+            'handlers': ['file'],
+            'level': 'INFO',
+            'propagate': False,
+        },
     },
 }
 
-# Redis settings
-# NOTE: celery wants the internal redis IP
-__redis_host = os.getenv("REDIS_HOST", "redis")
-__redis_port = os.getenv("REDIS_PORT_IN", "6479")
+[
+    CELERY_BROKER_URL,
+    CELERY_RESULT_BACKEND,
+    CELERY_ACCEPT_CONTENT,
+    CELERY_TASK_SERIALIZER,
+    CELERY_RESULT_SERIALIZER,
+    CELERY_BEAT_SCHEDULE,
+    CELERY_TIMEZONE,
+] = get_celery_settings()
 
-# Set transport and password based on local or server deployment
-__redis_ssl = os.getenv("REDIS_SSL", None)
-
-__redis_transport = "redis"  # pylint: disable=invalid-name
-__redis_params = ""  # pylint: disable=invalid-name
-
-if __redis_ssl is not None and __redis_ssl.lower() == "true":
-    __redis_transport = "rediss"  # pylint: disable=invalid-name
-    __redis_params = "?ssl_cert_reqs=required"  # pylint: disable=invalid-name
-
-__redis_password = os.getenv("REDIS_PASSWORD", None)
-if __redis_password is not None:
-    CELERY_BROKER_URL = f"{__redis_transport}://default:{__redis_password}@{__redis_host}:{__redis_port}{__redis_params}"  # noqa # pylint: disable=line-too-long
-else:
-    CELERY_BROKER_URL = f"{
-        __redis_transport}: // {__redis_host}: {__redis_port}{__redis_params}"
-
-CELERY_RESULT_BACKEND = CELERY_BROKER_URL
-CELERY_ACCEPT_CONTENT = ["application/json"]
-CELERY_TASK_SERIALIZER = "json"
-CELERY_RESULT_SERIALIZER = "json"
-
-# Read in the schedule from a file if it exists
-# NOTE: THe file stores the hour, minute, etc as strings
-__celery_beat_schedule_filepath = os.getenv("CELERY_BEAT_SCHEDULE_FILEPATH")
-CELERY_BEAT_SCHEDULE = {}
-with open("text.txt", "w") as fp:
-    fp.write("imtryin ")
-    fp.write(str(__celery_beat_schedule_filepath) + " ")
-    fp.write(str(os.getenv("CELERY_BEAT_SCHEDULE_FILEPATH")))
-if __celery_beat_schedule_filepath and \
-        os.path.exists(__celery_beat_schedule_filepath):
-
-    with open("text2.txt", "w") as fp:
-        fp.write("__celery_beat_schedule_filepath")
-    schedule_data = {}
-    with open(__celery_beat_schedule_filepath, "r", encoding="utf-8") as fp_in:
-        schedule_data = json.load(fp_in)
-        for key, value in schedule_data.items():
-            value["schedule"] = crontab(**value["schedule"])
-            CELERY_BEAT_SCHEDULE[key] = value
-
-TIME_ZONE = 'America/New_York'
+TIME_ZONE = get_system_timezone()
 USE_TZ = True
-CELERY_TIMEZONE = 'America/New_York'

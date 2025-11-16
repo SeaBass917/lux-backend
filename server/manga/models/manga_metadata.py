@@ -38,7 +38,8 @@ class MangaMetadata(MetadataBase):
     num_chapters = models.IntegerField(null=True, blank=True)
     visited_sources = models.ManyToManyField(WebDataSource)
 
-    def filter_by_titles(self, titles: list[str]) -> models.QuerySet:
+    @staticmethod
+    def filter_by_titles(titles: list[str]) -> models.QuerySet:
         """Filter manga metadata by titles.
 
         Args:
@@ -48,11 +49,11 @@ class MangaMetadata(MetadataBase):
             models.QuerySet: The filtered manga metadata queryset.
         """
         if not titles:
-            return self.all()
+            return MangaMetadata.objects.all()
 
         query = models.Q()
         for title in titles:
             query |= models.Q(title__icontains=title)
             query |= models.Q(title_original__icontains=title)
 
-        return self.filter(query)
+        return MangaMetadata.objects.filter(query)

@@ -1,13 +1,13 @@
 [
   {
-    "model": "metadata.VideoTypes",
+    "model": "video.VideoTypes",
     "pk": 1,
     "fields": {
       "name": "TV"
     }
   },
   {
-    "model": "metadata.VideoTypes",
+    "model": "video.VideoTypes",
     "pk": 2,
     "fields": {
       "name": "Movie"

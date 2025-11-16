@@ -5,5 +5,8 @@ from lux.views import LuxBaseAPIView
 
 
 class VideoBaseAPIView(LuxBaseAPIView):
-    permission_classes = [IsAuthenticated]
-    __module = Modules.Video
+
+    @property
+    def module_name(self) -> str:
+        """Module for Video"""
+        return Modules.Video

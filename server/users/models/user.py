@@ -19,3 +19,6 @@ class User(LuxBaseModel):
         BearerToken, on_delete=models.PROTECT, related_name='user')
     role = models.OneToOneField(
         Role, on_delete=models.PROTECT, related_name='user')
+
+    def __str__(self) -> str:
+        return f"({self.id})"

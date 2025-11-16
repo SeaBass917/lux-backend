@@ -1,4 +1,8 @@
+
 {
+    "python.analysis.extraPaths": [
+        "${workspaceFolder}/server"
+    ],
     "cSpell.words": [
         "iterrows",
         "Manhwa",

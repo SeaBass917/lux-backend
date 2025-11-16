@@ -3,8 +3,8 @@ class Modules:
     I just wanted auto-completing and all that nice-ness. Don't @ me.
     """
 
-    Lux = 'lux'
-    Users = 'users'
-    Metadata = 'metadata'
-    Manga = 'manga'
-    Video = 'video'
+    Lux = 'Lux'
+    Users = 'Users'
+    Metadata = 'Metadata'
+    Manga = 'Manga'
+    Video = 'Video'

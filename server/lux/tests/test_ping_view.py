@@ -1,5 +1,4 @@
-# tests_ping.py
-'''Making test for ping to make sure anyone can hit it'''
+"""Test suite: PingView"""
 from rest_framework import status
 from lux.tests import LuxBaseTest
 

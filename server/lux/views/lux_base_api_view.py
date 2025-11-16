@@ -7,6 +7,7 @@ from typing import Callable
 from django.http import HttpRequest
 from rest_framework import status
 from rest_framework.exceptions import AuthenticationFailed
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -38,7 +39,7 @@ def permission_required(permission: str):
         def wrapper(self: LuxBaseAPIView, request: HttpRequest, *args, **kwargs):
             action = Actions.lookup(view.__name__)
             if self.check_permission(
-                request, permission=permission, module=self.__module, action=action
+                request, permission=permission, module=self.module_name, action=action
             ):
                 return view(self, request=request, *args, **kwargs)
 
@@ -55,10 +56,12 @@ def permission_required(permission: str):
 class LuxBaseAPIView(APIView):
     """Base class for API views."""
 
+    permission_classes = [AllowAny]
+
     @property
     @abc.abstractmethod
-    def __module(self) -> str:
-        """Subclasses must provide a '__module' string value."""
+    def module_name(self) -> str:
+        """Subclasses must provide a 'module_name' string value."""
         pass
 
     def respond(self, result: str, message: str, data=None, status_code=None) -> Response:
@@ -120,7 +123,7 @@ class LuxBaseAPIView(APIView):
         else:
             logger.warning(
                 "User %s does not have permission (%s, %s, %s)",
-                user, permission, module, action)
+                user, module, permission, action)
             return False
 
     def parse_url_list(self, input_string: str) -> list[str]:

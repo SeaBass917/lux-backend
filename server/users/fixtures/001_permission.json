@@ -7,5 +7,14 @@
       "permission_name": "auth_test",
       "action": "view"
     }
+  },
+  {
+    "model": "users.permission",
+    "pk": 2,
+    "fields": {
+      "module_ref": 4,
+      "permission_name": "browsing",
+      "action": "view"
+    }
   }
 ]
