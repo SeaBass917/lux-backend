@@ -39,7 +39,7 @@ class MangaMetadata(MetadataBase):
     visited_sources = models.ManyToManyField(WebDataSource)
 
     @staticmethod
-    def filter_by_titles(titles: list[str]) -> models.QuerySet:
+    def filter_by_titles(titles: list[str] | None) -> models.QuerySet:
         """Filter manga metadata by titles.
 
         Args:

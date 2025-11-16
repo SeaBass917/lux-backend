@@ -1,14 +1,10 @@
 """This script sets up all fixtures in the program."""
 import json
 import os
-from faker import Faker
 from django.core import management
 from django.core.management.base import BaseCommand
 from django.core.serializers import deserialize
 from django.db import transaction, connection
-
-
-faker = Faker()
 
 
 class Command(BaseCommand):

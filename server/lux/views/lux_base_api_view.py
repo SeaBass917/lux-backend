@@ -126,7 +126,7 @@ class LuxBaseAPIView(APIView):
                 user, module, permission, action)
             return False
 
-    def parse_url_list(self, input_string: str) -> list[str]:
+    def parse_url_list(self, input_string: str) -> list[str] | None:
         """Utility that splits a comma-separated string into a list of strings.
         translates URL-encoded characters.
 
@@ -135,7 +135,7 @@ class LuxBaseAPIView(APIView):
         Returns:
             list[str]: The list of strings.
         """
-        return [url_parse.unquote(s) for s in input_string.split(',')]
+        return [url_parse.unquote(s) for s in input_string.split(',')] if input_string else None
 
     def __get_user(self, request: HttpRequest) -> User:
         """Get the user for the request.
