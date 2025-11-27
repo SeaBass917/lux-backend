@@ -73,14 +73,18 @@ services:
     networks:
       - shared-local-net
 
-  server:
-    container_name: nginx_proxy
-    image: nginx
+  nginx:
+    image: nginx:latest
     ports:
-      - "${NGINX_PORT}:${NGINX_PORT}"
+      - "80:80"
+      - "443:443"
     volumes:
-      - ./nginx/local/default.conf:/etc/nginx/conf.d/default.conf
-    restart: "no"
+      - ./nginx/local/default.conf.template:/etc/nginx/templates/default.conf.template:ro
+      - ./nginx/html:/usr/share/nginx/html:ro
+      # Add your certs and other volumes as needed
+    env_file:
+      - .env
+    entrypoint: /bin/sh -c "envsubst < /etc/nginx/templates/default.conf.template > /etc/nginx/conf.d/default.conf && exec nginx -g 'daemon off;'"
     depends_on:
       - db
       - api
@@ -88,6 +92,8 @@ services:
       - shared-local-net
 
 volumes:
+  certs:
+    driver: local
   postgres_data:
     driver: local
 

@@ -57,10 +57,10 @@ class MangaBaseTest(LuxBaseTest):
             artist=LuxBaseTest.create_person() if artist is None else artist,
             date_start=date_start,
             date_end=LuxBaseTest.faker.date_between_dates(
-                date_end=date_start) if date_end is None else date_end.date(),
+                date_start=date_start) if date_end is None else date_end.date(),
             date_added=timezone.now().date() if date_added is None else date_added.date(),
-            publisher=LuxBaseTest.faker.company_name_word() if publisher is None else publisher,
-            magazine=LuxBaseTest.faker.company_name_word() if magazine is None else magazine,
+            publisher=LuxBaseTest.faker.company() if publisher is None else publisher,
+            magazine=LuxBaseTest.faker.company() if magazine is None else magazine,
             has_english_license=LuxBaseTest.faker.boolean(
             ) if has_english_license is None else has_english_license,
             num_volumes=LuxBaseTest.faker.random_int(
@@ -77,9 +77,9 @@ class MangaBaseTest(LuxBaseTest):
             Tags.objects.get(id=3)] if tags is None else tags
 
         if visited_sources:
-            metadata.visited_sources.add(visited_sources)
+            metadata.visited_sources.add(*visited_sources)
         if tags:
-            metadata.tags.add(tags)
+            metadata.tags.add(*tags)
 
         metadata.save()
 
@@ -123,9 +123,12 @@ class MangaBaseTest(LuxBaseTest):
         MangaMetadata.objects.bulk_create(metadata_list)
 
         datasources = WebDataSource.objects.all()
+        tags = Tags.objects.all()
         for metadata in metadata_list:
             metadata.visited_sources.add(
                 *LuxBaseTest.faker.random_choices(datasources, 2))
+            metadata.tags.add(
+                *LuxBaseTest.faker.random_choices(tags, 3))
             metadata.save()  # technically not the most effiecient but eh..
 
         return metadata_list

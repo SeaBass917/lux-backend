@@ -16,10 +16,7 @@ Including another URLconf
 """
 from django.urls import path, include
 
-from lux.views.ping import PingAPIView
-
 urlpatterns = [
-    path("api/v1/healthy/", PingAPIView.as_view()),
     path("api/v1/manga/", include("manga.urls")),
     path("api/v1/video/", include("video.urls")),
     path("api/v1/users/", include("users.urls")),

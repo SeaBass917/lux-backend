@@ -4,4 +4,5 @@ class Permissions:
     """
 
     Browsing = 'browsing'
-    Streaming = 'streaming'
+    FileAccess = 'file_access'
+    Modifying = 'modifying'

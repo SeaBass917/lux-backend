@@ -143,11 +143,10 @@ USE_I18N = True
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-# We aren't using these settings. But we HAVE to use it to get DRF to work.
 REST_FRAMEWORK = {
-    "DEFAULT_PERMISSION_CLASSES": [
-        "rest_framework.permissions.AllowAny"
-    ],
+    # We aren't using these settings. But we HAVE to use it to get DRF to work.
+    "DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.AllowAny"],
+    "EXCEPTION_HANDLER": "lux.utils.custom_exception_handler.custom_exception_handler",
 }
 
 

@@ -16,5 +16,32 @@
       "permission_name": "browsing",
       "action": "view"
     }
+  },
+  {
+    "model": "users.permission",
+    "pk": 3,
+    "fields": {
+      "module_ref": 4,
+      "permission_name": "modifying",
+      "action": "create"
+    }
+  },
+  {
+    "model": "users.permission",
+    "pk": 4,
+    "fields": {
+      "module_ref": 4,
+      "permission_name": "modifying",
+      "action": "update"
+    }
+  },
+  {
+    "model": "users.permission",
+    "pk": 5,
+    "fields": {
+      "module_ref": 4,
+      "permission_name": "modifying",
+      "action": "delete"
+    }
   }
 ]

@@ -17,7 +17,8 @@ class LuxBaseTest(TestCase):
     """Base class for all tests against this API."""
 
     fixtures = ['000_module.json', '001_permission.json',
-                '001_roles.json', '002_roles_to_permissions.json']
+                '001_roles.json', '002_roles_to_permissions.json',
+                '000_tags.json']
 
     faker = Faker()
     faker_jp = Faker('ja_JP')

@@ -5,6 +5,7 @@ class Modules:
 
     Lux = 'Lux'
     Users = 'Users'
+    ResourceIndex = 'ResourceIndex'
     Metadata = 'Metadata'
     Manga = 'Manga'
     Video = 'Video'

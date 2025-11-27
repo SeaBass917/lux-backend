@@ -4,6 +4,7 @@ import functools
 import logging
 from urllib import parse as url_parse
 from typing import Callable
+from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
 from django.http import HttpRequest
 from rest_framework import status
 from rest_framework.exceptions import AuthenticationFailed
@@ -45,7 +46,7 @@ def permission_required(permission: str):
 
             return Response(
                 {"result": "error", "message": "Permission Denied"},
-                status=status.HTTP_403_FORBIDDEN,
+                status=status.HTTP_401_UNAUTHORIZED,
             )
 
         return wrapper
@@ -63,6 +64,58 @@ class LuxBaseAPIView(APIView):
     def module_name(self) -> str:
         """Subclasses must provide a 'module_name' string value."""
         pass
+
+    def dispatch(self, request: HttpRequest, *args, **kwargs):
+        """Override dispatch to catch common Django model exceptions.
+
+        Args:
+            request: The HTTP request.
+            *args: Additional positional arguments.
+            **kwargs: Additional keyword arguments.
+
+        Returns:
+            Response: The HTTP response.
+        """
+        self.headers = {}
+        path = None
+        user = None
+        try:
+            path = request.get_full_path()
+            user = self.__get_user(request)
+            return super().dispatch(request, *args, **kwargs)
+        except ObjectDoesNotExist as e:
+            logger.error("Object not found: %s, Path: %s, User: %s",
+                         str(e), path, user)
+            response = self.respond(
+                result="error",
+                message=f"Object not found: {str(e)}",
+                status_code=status.HTTP_404_NOT_FOUND,
+            )
+        except MultipleObjectsReturned as e:
+            logger.error(
+                "Multiple objects found: %s, Path: %s, User: %s", str(e), path, user)
+            response = self.respond(
+                result="error",
+                message="Multiple objects found when one was expected.",
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+        except AuthenticationFailed as e:
+            logger.error("Authentication failed: %s, Path: %s", str(e), path)
+            response = self.respond(
+                result="error",
+                message="Authentication failed.",
+                status_code=status.HTTP_401_UNAUTHORIZED,
+            )
+        except Exception as e:
+            logger.error("Unhandled exception: %s, Path: %s, User: %s",
+                         str(e), path, user)
+            response = self.respond(
+                result="error",
+                message="An unexpected error occurred.",
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+        return self.finalize_response(request, response, *args, **kwargs)
 
     def respond(self, result: str, message: str, data=None, status_code=None) -> Response:
         """Utility function to create a response object.

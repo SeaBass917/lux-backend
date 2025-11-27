@@ -29,12 +29,12 @@ def get_celery_settings() -> list[str]:
     # Set transport and password based on local or server deployment
     __redis_ssl = getenv("REDIS_SSL", None)
 
-    __redis_transport = "redis"  # pylint: disable=invalid-name
-    __redis_params = ""  # pylint: disable=invalid-name
+    __redis_transport = "redis"
+    __redis_params = ""
 
     if __redis_ssl is not None and __redis_ssl.lower() == "true":
-        __redis_transport = "rediss"  # pylint: disable=invalid-name
-        __redis_params = "?ssl_cert_reqs=required"  # pylint: disable=invalid-name
+        __redis_transport = "rediss"
+        __redis_params = "?ssl_cert_reqs=required"
 
     __redis_password = getenv("REDIS_PASSWORD", None)
     if __redis_password is not None:
@@ -49,18 +49,13 @@ def get_celery_settings() -> list[str]:
     CELERY_RESULT_SERIALIZER = "json"
 
     # Read in the schedule from a file if it exists
-    # NOTE: THe file stores the hour, minute, etc as strings
+    # NOTE: The file stores the hour, minute, etc as strings
     __celery_beat_schedule_filepath = getenv("CELERY_BEAT_SCHEDULE_FILEPATH")
     CELERY_BEAT_SCHEDULE = {}
-    with open("text.txt", "w") as fp:
-        fp.write("imtryin ")
-        fp.write(str(__celery_beat_schedule_filepath) + " ")
-        fp.write(str(getenv("CELERY_BEAT_SCHEDULE_FILEPATH")))
+
     if __celery_beat_schedule_filepath and \
             exists(__celery_beat_schedule_filepath):
 
-        with open("text2.txt", "w") as fp:
-            fp.write("__celery_beat_schedule_filepath")
         schedule_data = {}
         with open(__celery_beat_schedule_filepath, "r", encoding="utf-8") as fp_in:
             schedule_data = json_load(fp_in)
