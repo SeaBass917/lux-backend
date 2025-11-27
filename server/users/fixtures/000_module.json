@@ -1,0 +1,37 @@
+[
+  {
+    "model": "users.Module",
+    "pk": 1,
+    "fields": {
+      "module_name": "Lux"
+    }
+  },
+  {
+    "model": "users.Module",
+    "pk": 2,
+    "fields": {
+      "module_name": "Users"
+    }
+  },
+  {
+    "model": "users.Module",
+    "pk": 3,
+    "fields": {
+      "module_name": "Metadata"
+    }
+  },
+  {
+    "model": "users.Module",
+    "pk": 4,
+    "fields": {
+      "module_name": "Manga"
+    }
+  },
+  {
+    "model": "users.Module",
+    "pk": 5,
+    "fields": {
+      "module_name": "Video"
+    }
+  }
+]

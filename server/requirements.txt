@@ -1,0 +1,17 @@
+Django
+djangorestframework
+djangorestframework-simplejwt 
+django-cors-headers
+pytest-django
+Faker
+six
+gunicorn
+django-filter
+edc-constants
+pandas
+tqdm
+locust
+requests
+psycopg2-binary
+celery[redis]
+redis

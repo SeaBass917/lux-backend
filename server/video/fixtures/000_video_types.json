@@ -1,0 +1,16 @@
+[
+  {
+    "model": "video.VideoTypes",
+    "pk": 1,
+    "fields": {
+      "name": "TV"
+    }
+  },
+  {
+    "model": "video.VideoTypes",
+    "pk": 2,
+    "fields": {
+      "name": "Movie"
+    }
+  }
+]

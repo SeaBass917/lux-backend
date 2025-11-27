@@ -1,0 +1,11 @@
+#!/bin/bash
+# Exec a django command on the web container's manage.py
+
+PATH=$PATH:"$(pwd)/scripts/lib"
+
+# Determine the api ID
+CONTAINER_NAME=$(determine_api_container)
+CONTAINER_ID=$(docker ps | grep "$CONTAINER_NAME" | awk '{print $1}')
+
+# Pass the command to the container manager
+docker exec -i "$CONTAINER_ID" python manage.py $@

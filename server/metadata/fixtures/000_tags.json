@@ -1,0 +1,667 @@
+[
+  {
+    "model": "metadata.Tags",
+    "pk": 1,
+    "fields": {
+      "name": "Action"
+    }
+  },
+  {
+    "model": "metadata.Tags",
+    "pk": 2,
+    "fields": {
+      "name": "Adventure"
+    }
+  },
+  {
+    "model": "metadata.Tags",
+    "pk": 3,
+    "fields": {
+      "name": "Comedy"
+    }
+  },
+  {
+    "model": "metadata.Tags",
+    "pk": 4,
+    "fields": {
+      "name": "Drama"
+    }
+  },
+  {
+    "model": "metadata.Tags",
+    "pk": 5,
+    "fields": {
+      "name": "Fantasy"
+    }
+  },
+  {
+    "model": "metadata.Tags",
+    "pk": 6,
+    "fields": {
+      "name": "Horror"
+    }
+  },
+  {
+    "model": "metadata.Tags",
+    "pk": 7,
+    "fields": {
+      "name": "Mystery"
+    }
+  },
+  {
+    "model": "metadata.Tags",
+    "pk": 8,
+    "fields": {
+      "name": "Romance"
+    }
+  },
+  {
+    "model": "metadata.Tags",
+    "pk": 9,
+    "fields": {
+      "name": "Sci-Fi"
+    }
+  },
+  {
+    "model": "metadata.Tags",
+    "pk": 10,
+    "fields": {
+      "name": "Slice of Life"
+    }
+  },
+  {
+    "model": "metadata.Tags",
+    "pk": 11,
+    "fields": {
+      "name": "Supernatural"
+    }
+  },
+  {
+    "model": "metadata.Tags",
+    "pk": 12,
+    "fields": {
+      "name": "Thriller"
+    }
+  },
+  {
+    "model": "metadata.Tags",
+    "pk": 13,
+    "fields": {
+      "name": "Psychological"
+    }
+  },
+  {
+    "model": "metadata.Tags",
+    "pk": 14,
+    "fields": {
+      "name": "Historical"
+    }
+  },
+  {
+    "model": "metadata.Tags",
+    "pk": 15,
+    "fields": {
+      "name": "Mecha"
+    }
+  },
+  {
+    "model": "metadata.Tags",
+    "pk": 16,
+    "fields": {
+      "name": "Sports"
+    }
+  },
+  {
+    "model": "metadata.Tags",
+    "pk": 17,
+    "fields": {
+      "name": "School"
+    }
+  },
+  {
+    "model": "metadata.Tags",
+    "pk": 18,
+    "fields": {
+      "name": "Magic"
+    }
+  },
+  {
+    "model": "metadata.Tags",
+    "pk": 19,
+    "fields": {
+      "name": "Martial Arts"
+    }
+  },
+  {
+    "model": "metadata.Tags",
+    "pk": 20,
+    "fields": {
+      "name": "Music"
+    }
+  },
+  {
+    "model": "metadata.Tags",
+    "pk": 21,
+    "fields": {
+      "name": "Crime"
+    }
+  },
+  {
+    "model": "metadata.Tags",
+    "pk": 22,
+    "fields": {
+      "name": "Family"
+    }
+  },
+  {
+    "model": "metadata.Tags",
+    "pk": 23,
+    "fields": {
+      "name": "Friendship"
+    }
+  },
+  {
+    "model": "metadata.Tags",
+    "pk": 24,
+    "fields": {
+      "name": "Tragedy"
+    }
+  },
+  {
+    "model": "metadata.Tags",
+    "pk": 25,
+    "fields": {
+      "name": "War"
+    }
+  },
+  {
+    "model": "metadata.Tags",
+    "pk": 26,
+    "fields": {
+      "name": "Politics"
+    }
+  },
+  {
+    "model": "metadata.Tags",
+    "pk": 27,
+    "fields": {
+      "name": "Coming of Age"
+    }
+  },
+  {
+    "model": "metadata.Tags",
+    "pk": 28,
+    "fields": {
+      "name": "Parody"
+    }
+  },
+  {
+    "model": "metadata.Tags",
+    "pk": 29,
+    "fields": {
+      "name": "Ecchi"
+    }
+  },
+  {
+    "model": "metadata.Tags",
+    "pk": 30,
+    "fields": {
+      "name": "Harem"
+    }
+  },
+  {
+    "model": "metadata.Tags",
+    "pk": 31,
+    "fields": {
+      "name": "Shounen"
+    }
+  },
+  {
+    "model": "metadata.Tags",
+    "pk": 32,
+    "fields": {
+      "name": "Shoujo"
+    }
+  },
+  {
+    "model": "metadata.Tags",
+    "pk": 33,
+    "fields": {
+      "name": "Seinen"
+    }
+  },
+  {
+    "model": "metadata.Tags",
+    "pk": 34,
+    "fields": {
+      "name": "Josei"
+    }
+  },
+  {
+    "model": "metadata.Tags",
+    "pk": 35,
+    "fields": {
+      "name": "Demons"
+    }
+  },
+  {
+    "model": "metadata.Tags",
+    "pk": 36,
+    "fields": {
+      "name": "Vampires"
+    }
+  },
+  {
+    "model": "metadata.Tags",
+    "pk": 37,
+    "fields": {
+      "name": "Zombies"
+    }
+  },
+  {
+    "model": "metadata.Tags",
+    "pk": 38,
+    "fields": {
+      "name": "Space"
+    }
+  },
+  {
+    "model": "metadata.Tags",
+    "pk": 39,
+    "fields": {
+      "name": "Military"
+    }
+  },
+  {
+    "model": "metadata.Tags",
+    "pk": 40,
+    "fields": {
+      "name": "Detective"
+    }
+  },
+  {
+    "model": "metadata.Tags",
+    "pk": 41,
+    "fields": {
+      "name": "Suspense"
+    }
+  },
+  {
+    "model": "metadata.Tags",
+    "pk": 42,
+    "fields": {
+      "name": "Biography"
+    }
+  },
+  {
+    "model": "metadata.Tags",
+    "pk": 43,
+    "fields": {
+      "name": "Documentary"
+    }
+  },
+  {
+    "model": "metadata.Tags",
+    "pk": 44,
+    "fields": {
+      "name": "Animation"
+    }
+  },
+  {
+    "model": "metadata.Tags",
+    "pk": 45,
+    "fields": {
+      "name": "Live Action"
+    }
+  },
+  {
+    "model": "metadata.Tags",
+    "pk": 46,
+    "fields": {
+      "name": "Western"
+    }
+  },
+  {
+    "model": "metadata.Tags",
+    "pk": 47,
+    "fields": {
+      "name": "Noir"
+    }
+  },
+  {
+    "model": "metadata.Tags",
+    "pk": 48,
+    "fields": {
+      "name": "Cyberpunk"
+    }
+  },
+  {
+    "model": "metadata.Tags",
+    "pk": 49,
+    "fields": {
+      "name": "Steampunk"
+    }
+  },
+  {
+    "model": "metadata.Tags",
+    "pk": 50,
+    "fields": {
+      "name": "Dystopian"
+    }
+  },
+  {
+    "model": "metadata.Tags",
+    "pk": 51,
+    "fields": {
+      "name": "Utopian"
+    }
+  },
+  {
+    "model": "metadata.Tags",
+    "pk": 52,
+    "fields": {
+      "name": "Survival"
+    }
+  },
+  {
+    "model": "metadata.Tags",
+    "pk": 53,
+    "fields": {
+      "name": "Post-Apocalyptic"
+    }
+  },
+  {
+    "model": "metadata.Tags",
+    "pk": 54,
+    "fields": {
+      "name": "Time Travel"
+    }
+  },
+  {
+    "model": "metadata.Tags",
+    "pk": 55,
+    "fields": {
+      "name": "Isekai"
+    }
+  },
+  {
+    "model": "metadata.Tags",
+    "pk": 56,
+    "fields": {
+      "name": "Reverse Harem"
+    }
+  },
+  {
+    "model": "metadata.Tags",
+    "pk": 57,
+    "fields": {
+      "name": "Yaoi"
+    }
+  },
+  {
+    "model": "metadata.Tags",
+    "pk": 58,
+    "fields": {
+      "name": "Yuri"
+    }
+  },
+  {
+    "model": "metadata.Tags",
+    "pk": 59,
+    "fields": {
+      "name": "Boys' Love"
+    }
+  },
+  {
+    "model": "metadata.Tags",
+    "pk": 60,
+    "fields": {
+      "name": "Girls' Love"
+    }
+  },
+  {
+    "model": "metadata.Tags",
+    "pk": 61,
+    "fields": {
+      "name": "LGBTQ+"
+    }
+  },
+  {
+    "model": "metadata.Tags",
+    "pk": 62,
+    "fields": {
+      "name": "Mystery"
+    }
+  },
+  {
+    "model": "metadata.Tags",
+    "pk": 63,
+    "fields": {
+      "name": "Investigation"
+    }
+  },
+  {
+    "model": "metadata.Tags",
+    "pk": 64,
+    "fields": {
+      "name": "Revenge"
+    }
+  },
+  {
+    "model": "metadata.Tags",
+    "pk": 65,
+    "fields": {
+      "name": "Betrayal"
+    }
+  },
+  {
+    "model": "metadata.Tags",
+    "pk": 66,
+    "fields": {
+      "name": "Survival"
+    }
+  },
+  {
+    "model": "metadata.Tags",
+    "pk": 67,
+    "fields": {
+      "name": "Disaster"
+    }
+  },
+  {
+    "model": "metadata.Tags",
+    "pk": 68,
+    "fields": {
+      "name": "Road Movie"
+    }
+  },
+  {
+    "model": "metadata.Tags",
+    "pk": 69,
+    "fields": {
+      "name": "Heist"
+    }
+  },
+  {
+    "model": "metadata.Tags",
+    "pk": 70,
+    "fields": {
+      "name": "Superhero"
+    }
+  },
+  {
+    "model": "metadata.Tags",
+    "pk": 71,
+    "fields": {
+      "name": "Anti-Hero"
+    }
+  },
+  {
+    "model": "metadata.Tags",
+    "pk": 72,
+    "fields": {
+      "name": "Satire"
+    }
+  },
+  {
+    "model": "metadata.Tags",
+    "pk": 73,
+    "fields": {
+      "name": "Dark Comedy"
+    }
+  },
+  {
+    "model": "metadata.Tags",
+    "pk": 74,
+    "fields": {
+      "name": "Family Drama"
+    }
+  },
+  {
+    "model": "metadata.Tags",
+    "pk": 75,
+    "fields": {
+      "name": "Medical"
+    }
+  },
+  {
+    "model": "metadata.Tags",
+    "pk": 76,
+    "fields": {
+      "name": "Legal"
+    }
+  },
+  {
+    "model": "metadata.Tags",
+    "pk": 77,
+    "fields": {
+      "name": "Political"
+    }
+  },
+  {
+    "model": "metadata.Tags",
+    "pk": 78,
+    "fields": {
+      "name": "Espionage"
+    }
+  },
+  {
+    "model": "metadata.Tags",
+    "pk": 79,
+    "fields": {
+      "name": "Fantasy World"
+    }
+  },
+  {
+    "model": "metadata.Tags",
+    "pk": 80,
+    "fields": {
+      "name": "Game"
+    }
+  },
+  {
+    "model": "metadata.Tags",
+    "pk": 81,
+    "fields": {
+      "name": "Otaku Culture"
+    }
+  },
+  {
+    "model": "metadata.Tags",
+    "pk": 82,
+    "fields": {
+      "name": "Idol"
+    }
+  },
+  {
+    "model": "metadata.Tags",
+    "pk": 83,
+    "fields": {
+      "name": "Cooking"
+    }
+  },
+  {
+    "model": "metadata.Tags",
+    "pk": 84,
+    "fields": {
+      "name": "Gourmet"
+    }
+  },
+  {
+    "model": "metadata.Tags",
+    "pk": 85,
+    "fields": {
+      "name": "Travel"
+    }
+  },
+  {
+    "model": "metadata.Tags",
+    "pk": 86,
+    "fields": {
+      "name": "Nature"
+    }
+  },
+  {
+    "model": "metadata.Tags",
+    "pk": 87,
+    "fields": {
+      "name": "Animals"
+    }
+  },
+  {
+    "model": "metadata.Tags",
+    "pk": 88,
+    "fields": {
+      "name": "School Life"
+    }
+  },
+  {
+    "model": "metadata.Tags",
+    "pk": 89,
+    "fields": {
+      "name": "Workplace"
+    }
+  },
+  {
+    "model": "metadata.Tags",
+    "pk": 90,
+    "fields": {
+      "name": "Technology"
+    }
+  },
+  {
+    "model": "metadata.Tags",
+    "pk": 91,
+    "fields": {
+      "name": "Artificial Intelligence"
+    }
+  },
+  {
+    "model": "metadata.Tags",
+    "pk": 92,
+    "fields": {
+      "name": "Robots"
+    }
+  },
+  {
+    "model": "metadata.Tags",
+    "pk": 93,
+    "fields": {
+      "name": "Aliens"
+    }
+  },
+  {
+    "model": "metadata.Tags",
+    "pk": 94,
+    "fields": {
+      "name": "Gods"
+    }
+  },
+  {
+    "model": "metadata.Tags",
+    "pk": 95,
+    "fields": {
+      "name": "Mythology"
+    }
+  }
+]
