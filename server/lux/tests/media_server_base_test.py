@@ -4,71 +4,45 @@ from django.test import TestCase, Client
 from faker import Faker
 from json import dumps
 
+from lux.constants.roles import Roles
 from metadata.models.person import Person
-from users.models import (
-    BearerToken,
-    Role,
-    User,
-)
-from users.services.crypto import create_bearer_token
+from users.models import User
 
 
 class LuxBaseTest(TestCase):
     """Base class for all tests against this API."""
 
-    fixtures = ['000_module.json', '001_permission.json',
-                '001_roles.json', '002_roles_to_permissions.json',
-                '000_tags.json']
+    fixtures = []
 
     faker = Faker()
     faker_jp = Faker('ja_JP')
 
     @staticmethod
-    def create_user(bt: BearerToken = None, role: Role = None) -> User:
+    def create_user(username: str = None, role: Roles = Roles.ADULT) -> User:
         """Create a user object in the Users table.
-        All details of that user are randomly generated using the faker library.
+        All details of that user are randomly generated using the faker library,
+        unless otherwise specified.
 
-        Args:
-            password (str, optional): The password for the user. Defaults to None
-
-        Returns:
-            User: The user object created.
+        Raises:
+            ValidationError: If the fields are not valid.
         """
-        if bt is None:
-            bt = create_bearer_token()
+        if username is None:
+            username = LuxBaseTest.faker.user_name()
 
-        if role is None:
-            role = LuxBaseTest.create_role()
-
-        user = User.objects.create(bearer_token=bt, role=role)
+        user = User.objects.create(username=username, role=role)
         return user
-
-    @staticmethod
-    def create_role(role_name: str = None):
-        """Create a role object in the Roles table.
-
-        Args:
-            role_name: str
-                Override for the name of the role. 
-                If left blank a random one will be generated
-
-        Returns:
-            Role: The role object created.
-        """
-        if role_name is None:
-            role_name = LuxBaseTest.faker.pystr()
-
-        role = Role.objects.create(role=role_name)
-        return role
 
     @staticmethod
     def create_person(name: str | None = None) -> Person:
         """Create a person.
 
-        Returns:
-            Person: The person.
+        Raises:
+            ValidationError: If the fields are not valid.
         """
-        return Person.objects.create(name=LuxBaseTest.faker.name() if name is None else name)
+        if name is None:
+            name = LuxBaseTest.faker.name()
+
+        return Person.objects.create(name=name)
 
     @staticmethod
     def create_people(count: int = 3) -> list[Person]:
@@ -79,25 +53,14 @@ class LuxBaseTest(TestCase):
 
         Returns:
             list[Person]: The people.
+
+        Raises:
+            ValidationError: If the fields are not valid.
         """
         return Person.objects.bulk_create(
             [Person(name=LuxBaseTest.faker.name()) for _ in range(count)])
 
-    def set_up_user_with_role(self, role: str) -> User:
-        """Create a user that has a specific role.
-        Set up the client to carry out subsequent calls as that user.
-
-        Returns:
-            User: The user object created.
-
-        Raises:
-            Role.DoesNotExist: If the specified role does not exist.
-        """
-        role_obj = Role.objects.get(role=role)
-        user = LuxBaseTest.create_user(role=role_obj)
-        self.client.defaults['HTTP_AUTHORIZATION'] = f'Bearer {user.bearer_token.token}'
-
-    def assertDictListsEqual(test_case_instance, list1: list[dict[str, Any]], list2: list[dict[str, Any]], key_to_sort_by: str = None):
+    def assert_dict_lists_equal(test_case_instance, list1: list[dict[str, Any]], list2: list[dict[str, Any]], key_to_sort_by: str = None):
         """
         Compares two lists of dictionaries for equality, providing a detailed error message 
         if differences are found. Optionally sorts lists by a key before comparison.

@@ -1,15 +1,17 @@
 """Base Model Used in All Lux tables."""
-from django.db import models
+import uuid
 
-from lux.managers import LuxBaseModelManager
+from django.db import models
 
 
 class LuxBaseModel(models.Model):
-    """Base model for all models in the this database.
+    """Base model for all models in this database.
     """
-    objects = LuxBaseModelManager()
-    case_insensitive_fields = []
-    untrimmed_fields = []
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    _untrimmed_fields = []
+    """Fields that should not have their whitespace trimmed 
+    by our automatic trimming system."""
 
     def _trim_whitespace(self):
         """
@@ -25,24 +27,17 @@ class LuxBaseModel(models.Model):
             field_name = field.name
             # Only trim CharFields and TextFields if not in untrimmed_fields
             if isinstance(field, (models.CharField, models.TextField)) and \
-                    field_name not in self.untrimmed_fields:
+                    field_name not in self._untrimmed_fields:
                 field_value = getattr(self, field_name)
                 if isinstance(field_value, str):  # Make sure the value is a string
                     trimmed_value = field_value.strip()
                     setattr(self, field_name, trimmed_value)
 
-    def _convert_case_insensitive_fields(self):
-        """
-        Converts the values of specified fields in `case_insensitive_fields` to uppercase.
-
-        This function iterates through the list of fields specified in `case_insensitive_fields` 
-        and converts their values to uppercase before saving the model. This ensures that all values 
-        in these fields are stored in a consistent, case-insensitive format.
-        """
-        for field_name in self.case_insensitive_fields:
-            field_value = getattr(self, field_name)
-            if field_value:
-                setattr(self, field_name, field_value.upper())
+    def save(self, *args, **kwargs):
+        """Override save to enforce validation on every save."""
+        self._trim_whitespace()
+        self.full_clean()
+        super().save(*args, **kwargs)
 
     class Meta:
         abstract = True

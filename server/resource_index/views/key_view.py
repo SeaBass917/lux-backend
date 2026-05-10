@@ -1,13 +1,11 @@
 from django.http import HttpRequest
-from lux.constants import Permissions
-from lux.views import permission_required
-from resource_index.views.base_resource_index_view import ResourceIndexBaseAPIView
+
+from lux.views.lux_base_api_view import LuxBaseAPIView
 
 
-class ResourceIndexSessionKeyAPIView(ResourceIndexBaseAPIView):
+class ResourceIndexSessionKeyAPIView(LuxBaseAPIView):
     """Used to retrieve/generate user session keys."""
 
-    @permission_required(permission=Permissions.FileAccess)
     def get(self, request: HttpRequest):
         """Create a new session key for the user, 
         set up the public file access with this key,

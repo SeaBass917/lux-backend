@@ -4,8 +4,39 @@
         "${workspaceFolder}/server"
     ],
     "cSpell.words": [
+        "djangorestframework",
+        "gunicorn",
         "iterrows",
         "Manhwa",
-        "pystr"
+        "psycopg",
+        "pytest",
+        "pylint",
+        "pystr",
+        "qrcode",
+        "simplejwt",
+        "venv"
+    ],
+    "persistentTerminals.terminals": [
+        {
+            "name": "Docker Server",
+            "color": "terminal.ansiBlue",
+            "commands": [
+                "cd ./"
+            ]
+        },
+        {
+            "name": "Frontend",
+            "color": "terminal.ansiGreen",
+            "commands": [
+                "cd ./web/"
+            ]
+        },
+        {
+            "name": "Bash",
+            "color": "terminal.ansiWhite",
+            "commands": [
+                "source .venv/bin/activate"
+            ]
+        }
     ]
 }

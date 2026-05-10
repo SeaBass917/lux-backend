@@ -1,17 +1,26 @@
+# Core Django REST w/ JWT support.
 Django
 djangorestframework
 djangorestframework-simplejwt 
+
+# API utilities
 django-cors-headers
+
+# Testing
 pytest-django
 Faker
-six
+
+# Production server
 gunicorn
-django-filter
-edc-constants
-pandas
-tqdm
-locust
-requests
+
+# Database
 psycopg2-binary
-celery[redis]
-redis
+
+# Scheduled Tasks
+django-q2
+
+# QR Code generation
+qrcode[pil]
+
+# Timezone support
+pytz

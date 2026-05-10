@@ -1,17 +1,14 @@
 from django.http import HttpRequest
 from rest_framework import status
 
+from lux.views.lux_base_api_view import LuxBaseAPIView
 from manga.models import MangaMetadata
 from manga.serializers import MangaMetadataSerializer
-from manga.views import MangaBaseAPIView
-from lux.constants import Permissions
-from lux.views import permission_required
 
 
-class MangaMetadataAPIView(MangaBaseAPIView):
+class MangaMetadataAPIView(LuxBaseAPIView):
     """Ix with single manga metadata."""
 
-    @permission_required(permission=Permissions.Browsing)
     def get(self, request: HttpRequest, id: int):
         """Return a response to indicate the server is running.
 
@@ -36,7 +33,6 @@ class MangaMetadataAPIView(MangaBaseAPIView):
             status_code=status.HTTP_200_OK,
         )
 
-    @permission_required(permission=Permissions.Modifying)
     def put(self, request: HttpRequest, id: int):
         """Update manga metadata.
 
@@ -70,7 +66,6 @@ class MangaMetadataAPIView(MangaBaseAPIView):
                 status_code=status.HTTP_400_BAD_REQUEST,
             )
 
-    @permission_required(permission=Permissions.Modifying)
     def delete(self, request: HttpRequest, id: int):
         """Delete manga metadata.
 

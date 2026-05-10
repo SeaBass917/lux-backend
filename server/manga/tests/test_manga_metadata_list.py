@@ -30,7 +30,7 @@ class MangaMetadataListViewTest(MangaBaseTest):
 
         data: list[MangaMetadata] = response.json()['data']
         data.sort(key=sort_by_id)
-        self.assertDictListsEqual(metadata_list, data)
+        self.assert_dict_lists_equal(metadata_list, data)
 
     def test_auth_list(self):
         """

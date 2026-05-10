@@ -1,17 +1,14 @@
 from django.http import HttpRequest
 from rest_framework import status
 
+from lux.views.lux_base_api_view import LuxBaseAPIView
 from manga.models import MangaMetadata
 from manga.serializers import MangaMetadataSerializer
-from manga.views import MangaBaseAPIView
-from lux.constants import Permissions
-from lux.views import permission_required
 
 
-class MangaMetadataListAPIView(MangaBaseAPIView):
+class MangaMetadataListAPIView(LuxBaseAPIView):
     """Ix with the manga metadata."""
 
-    @permission_required(permission=Permissions.Browsing)
     def get(self, request: HttpRequest):
         """List view of the manga metadata.
         Optionally filter by titles.

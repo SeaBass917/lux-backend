@@ -11,19 +11,17 @@ https://docs.djangoproject.com/en/5.0/ref/settings/
 """
 
 import os
-from pathlib import Path
-import logging
+from datetime import timedelta
 import json
+import logging
+from pathlib import Path
 
 from lux.utils.settings.timezone import get_system_timezone
-from lux.utils.settings.celery import get_celery_settings
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/5.0/howto/deployment/checklist/
+SITE_URL = os.getenv("SITE_URL", "http://localhost")  # Override in production
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.getenv("SECRET_KEY", "")
@@ -38,13 +36,10 @@ if __env_allowed_host:
 
 # Application definition
 INSTALLED_APPS = [
-    # Even though we bypass all of Django's auth system, we still need these
-    # apps because DRF requires them. Even if we skip all of the stuff.
     "django.contrib.auth",
     "django.contrib.contenttypes",
-
-    # My Stuff
     "rest_framework",
+    "rest_framework_simplejwt",
     "corsheaders",
     "lux",
     "users",
@@ -57,45 +52,19 @@ MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.security.SecurityMiddleware",
-    "django.middleware.csrf.CsrfViewMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
-
-CORS_ALLOW_CREDENTIALS = True
-
-CORS_ORIGIN_WHITELIST = (
-    "http://127.0.0.1",
-    "http://api",
-    "http://server",
-    "http://localhost",
-    "http://localhost:3000",
-)
-
-CORS_ALLOWED_ORIGINS = tuple(list(CORS_ORIGIN_WHITELIST) +
-                            [f"http://{host}" for host in ALLOWED_HOSTS if f"http://{host}" not in CORS_ORIGIN_WHITELIST])  # noqa # pylint: disable=line-too-long
-
-CSRF_TRUSTED_ORIGINS = [
-    "http://127.0.0.1",
-    "http://api",
-    "http://server",
-    "http://localhost",
+# CORS Configuration - Allow frontend to call API
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000",  # React dev server
 ]
-CSRF_TRUSTED_ORIGINS = CSRF_TRUSTED_ORIGINS \
-    + [f"http://{host}" for host in ALLOWED_HOSTS if f"http://{host}" not in CSRF_TRUSTED_ORIGINS]  # noqa # pylint: disable=line-too-long
 
-CORS_ALLOW_HEADERS = [
-    "accept",
-    "accept-encoding",
-    "authorization",
-    "content-type",
-    "dnt",
-    "origin",
-    "user-agent",
-    "x-csrftoken",
-    "x-requested-with",
-    "role",
-]
+# Add production frontend URLs when deploying
+if not DEBUG:
+    CORS_ALLOWED_ORIGINS += [
+        # Add production frontend URLs here
+    ]
 
 ROOT_URLCONF = "lux.urls"
 
@@ -129,23 +98,52 @@ DATABASES = {
     },
 }
 
-# We handle the auth. There are no passwords.
-AUTH_PASSWORD_VALIDATORS = []
-AUTHENTICATION_BACKENDS = []
+# Authentication configuration
+AUTH_USER_MODEL = "users.User"
+AUTHENTICATION_BACKENDS = [
+    'django.contrib.auth.backends.ModelBackend',  # Standard username/password
+]
+AUTH_PASSWORD_VALIDATORS = [
+    {
+        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+        'OPTIONS': {
+            'min_length': 8,
+        }
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
+    },
+]
+
+# JWT Configuration
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=15),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
+    'ROTATE_REFRESH_TOKENS': False,
+    'BLACKLIST_AFTER_ROTATION': False,
+    'ALGORITHM': 'HS256',
+    'SIGNING_KEY': SECRET_KEY,
+    'AUTH_HEADER_TYPES': ('Bearer',),
+}
 
 # Internationalization
 # https://docs.djangoproject.com/en/5.0/topics/i18n/
 LANGUAGE_CODE = "en-us"
 USE_I18N = True
 
-# Default primary key field type
-# https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field
-
-DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
-
 REST_FRAMEWORK = {
-    # We aren't using these settings. But we HAVE to use it to get DRF to work.
-    "DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.AllowAny"],
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        "rest_framework_simplejwt.authentication.JWTAuthentication",
+    ],
+    "DEFAULT_PERMISSION_CLASSES": [
+        "rest_framework.permissions.IsAuthenticated",
+    ],
     "EXCEPTION_HANDLER": "lux.utils.custom_exception_handler.custom_exception_handler",
 }
 
@@ -197,16 +195,6 @@ LOGGING = {
         },
     },
 }
-
-[
-    CELERY_BROKER_URL,
-    CELERY_RESULT_BACKEND,
-    CELERY_ACCEPT_CONTENT,
-    CELERY_TASK_SERIALIZER,
-    CELERY_RESULT_SERIALIZER,
-    CELERY_BEAT_SCHEDULE,
-    CELERY_TIMEZONE,
-] = get_celery_settings()
 
 TIME_ZONE = get_system_timezone()
 USE_TZ = True
