@@ -3,8 +3,8 @@ from datetime import timezone
 from rest_framework import status
 
 from lux.utils.data_structures import sort_by_id
-from manga.models.manga_metadata import MangaMetadata
-from manga.serializers.manga_metadata_serializer import MangaMetadataSerializer
+from manga.models.manga import Manga
+from manga.serializers.manga_detail_serializer import MangaMetadataSerializer
 from manga.tests.manga_base_test import MangaBaseTest
 
 
@@ -28,7 +28,7 @@ class MangaMetadataListViewTest(MangaBaseTest):
         self.assertEqual(response.status_code,
                          status.HTTP_200_OK, response.content)
 
-        data: list[MangaMetadata] = response.json()['data']
+        data: list[Manga] = response.json()['data']
         data.sort(key=sort_by_id)
         self.assert_dict_lists_equal(metadata_list, data)
 

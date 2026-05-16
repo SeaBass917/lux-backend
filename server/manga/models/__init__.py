@@ -1,2 +1,1 @@
-from .manga_types import MangaTypes
-from .manga_metadata import MangaMetadata
+from .manga import Manga

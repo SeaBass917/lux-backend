@@ -1,11 +1,14 @@
 """Base class View for all views in the project."""
+from dataclasses import fields
 import functools
+import json
 import logging
 from urllib import parse as url_parse
 from typing import Callable
 from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
-from django.http import HttpRequest
+from django.http import JsonResponse
 from rest_framework import status
+from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -24,7 +27,7 @@ def admin_required(view: Callable):
         The wrapped view function.
     """
     @functools.wraps(view)
-    def wrapper(self: "LuxBaseAPIView", request: HttpRequest, *args, **kwargs):
+    def wrapper(self: "LuxBaseAPIView", request: Request, *args, **kwargs):
         if request.user.role != Roles.ADMIN:
             return Response(
                 {"result": "error", "message": "Admin access required"},
@@ -34,6 +37,39 @@ def admin_required(view: Callable):
     
     return wrapper
 
+
+def enforce_interface(dataclass_cls):
+    """Decorator to enforce that the request body matches a given dataclass interface."""
+    def decorator(view_func):
+        @functools.wraps(view_func)
+        def _wrapped_view(view_instance, request, *args, **kwargs):
+            # DRF has already parsed the JSON into request.data!
+            payload = request.data or {}
+            
+            missing_fields = []
+            validated_data = {}
+
+            # Inspect the dataclass fields
+            for field in fields(dataclass_cls):
+                if field.name in payload:
+                    validated_data[field.name] = payload[field.name]
+                # If field is missing and has no default value, it is required
+                elif field.default == field.default_factory:
+                    missing_fields.append(field.name)
+
+            if missing_fields:
+                return Response(
+                    {"error": f"Missing required fields: {', '.join(missing_fields)}"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            # Convert payload into the strict dataclass instance
+            interface_instance = dataclass_cls(**validated_data)
+            
+            # Pass the dataclass instance into the view function
+            return view_func(view_instance, request, interface_instance, *args, **kwargs)
+        return _wrapped_view
+    return decorator
 
 class LuxBaseAPIView(APIView):
     """Base class for API views.
@@ -64,7 +100,7 @@ class LuxBaseAPIView(APIView):
         status.HTTP_500_INTERNAL_SERVER_ERROR: "Internal server error",
     }
 
-    def dispatch(self, request: HttpRequest, *args, **kwargs):
+    def dispatch(self, request: Request, *args, **kwargs):
         """Override dispatch to catch common Django model exceptions.
 
         Args:

@@ -1,2 +1,2 @@
 from .manga_metadata import MangaMetadataAPIView
-from .manga_metadata_list import MangaMetadataListAPIView
+from .manga_list import MangaMetadataListAPIView

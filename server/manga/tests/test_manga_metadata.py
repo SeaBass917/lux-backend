@@ -3,8 +3,8 @@ from datetime import timezone
 from rest_framework import status
 
 from lux.utils.data_structures import sort_by_id
-from manga.models.manga_metadata import MangaMetadata
-from manga.serializers.manga_metadata_serializer import MangaMetadataSerializer
+from manga.models.manga import Manga
+from manga.serializers.manga_detail_serializer import MangaMetadataSerializer
 from manga.tests.manga_base_test import MangaBaseTest
 
 
@@ -26,7 +26,7 @@ class MangaMetadataViewTest(MangaBaseTest):
         self.assertEqual(response.status_code,
                          status.HTTP_200_OK, response.content)
 
-        data: MangaMetadata = response.json()['data']
+        data: Manga = response.json()['data']
         self.assertDictEqual(metadata_data, data)
 
     def test_auth_get(self):

@@ -1,1 +1,1 @@
-from .manga_metadata_serializer import MangaMetadataSerializer
+from .manga_detail_serializer import MangaMetadataSerializer

@@ -3,7 +3,7 @@
 from datetime import datetime
 from django.utils import timezone
 from lux.tests import LuxBaseTest
-from manga.models.manga_metadata import MangaMetadata
+from manga.models.manga import Manga
 from manga.models.manga_types import MangaTypes
 from metadata.models.person import Person
 from metadata.models.tags import Tags
@@ -33,7 +33,7 @@ class MangaBaseTest(LuxBaseTest):
                               has_english_license: bool | None = None,
                               num_volumes: int | None = None,
                               num_chapters: int | None = None,
-                              visited_sources: list[WebDataSource] | None = None) -> list[MangaMetadata]:
+                              visited_sources: list[WebDataSource] | None = None) -> list[Manga]:
         """Create a single manga metadata.
 
         Args:
@@ -44,7 +44,7 @@ class MangaBaseTest(LuxBaseTest):
         """
         date_start = LuxBaseTest.faker.past_date(
         ) if date_start is None else date_start.date()
-        metadata = MangaMetadata.objects.create(
+        metadata = Manga.objects.create(
             title=LuxBaseTest.faker.name() if title is None else title,
             title_original=LuxBaseTest.faker_jp.name(
             ) if title_original is None else title_original,
@@ -86,7 +86,7 @@ class MangaBaseTest(LuxBaseTest):
         return metadata
 
     @staticmethod
-    def create_manga_metadata_list(count: int = 3) -> list[MangaMetadata]:
+    def create_manga_metadata_list(count: int = 3) -> list[Manga]:
         """Create a list of manga metadata.
 
         Args:
@@ -95,14 +95,14 @@ class MangaBaseTest(LuxBaseTest):
         Returns:
             list[MangaMetadata]: The metadata.
         """
-        metadata_list: list[MangaMetadata] = []
+        metadata_list: list[Manga] = []
         for _ in range(count):
             [author, artist] = LuxBaseTest.create_people(2)
             start_date = LuxBaseTest.faker.past_date()
             now = timezone.now()
             b_type = LuxBaseTest.faker.random_choices(
                 MangaTypes.objects.all(), 1)[0]
-            metadata_list.append(MangaMetadata(
+            metadata_list.append(Manga(
                 title=LuxBaseTest.faker.name(),
                 title_original=LuxBaseTest.faker_jp.name(),
                 description=LuxBaseTest.faker.paragraph(3),
@@ -120,7 +120,7 @@ class MangaBaseTest(LuxBaseTest):
                 num_volumes=LuxBaseTest.faker.random_int(1, 45),
                 num_chapters=LuxBaseTest.faker.random_int(1, 45)))
 
-        MangaMetadata.objects.bulk_create(metadata_list)
+        Manga.objects.bulk_create(metadata_list)
 
         datasources = WebDataSource.objects.all()
         tags = Tags.objects.all()
